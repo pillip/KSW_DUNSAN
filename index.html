@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>둔산 재건축 트래커</title>
+<meta name="description" content="둔산지구 노후계획도시 정비 17개 구역의 선도지구 선정 현황, 절차 단계, 10년 로드맵, 이주 규모를 한 곳에서 확인합니다.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+/* 레이아웃: 1160px 단일 컬럼. 지도(실측 타일) + 상세패널 2단 → 모바일 1단. 섹션 순서: 어디 / 언제 / 얼마나 / 왜 / 의회 / 자료 */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --surface-2:#eaedea; --fg:#1b2230; --muted:#5d6675; --line:#d8dde2;
+  --accent:#1e4fd0; --accent-soft:#e2e8fb;
+  --sel:#167a54; --sel-soft:#d8efe4;
+  --app:#bf7a0f; --app-soft:#fae9cf;
+  --none:#8a94a1; --excl:#b7bec7; --unk:#9aa3ae;
+  --font-sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1317; --surface:#171c22; --surface-2:#1f262e; --fg:#e7eaee; --muted:#9ba5b2; --line:#2b333d;
+    --accent:#7d9dff; --accent-soft:#1c2742;
+    --sel:#3fc48f; --sel-soft:#143427;
+    --app:#eaa63c; --app-soft:#3a2a10;
+    --none:#6e7887; --excl:#4a535f; --unk:#6f7987;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);line-height:1.55;font-size:15px;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+h2{font-size:1.3rem;font-weight:600}
+p{margin:0}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:18px;height:56px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--fg);letter-spacing:-.01em;white-space:nowrap}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
+.brand .mark::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--surface)}
+.nav ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;margin-left:auto}
+.nav li a{color:var(--muted);font-size:.9rem}
+.nav li a:hover{color:var(--fg);text-decoration:none}
+.nav .upd{font-size:.78rem;color:var(--muted);white-space:nowrap}
+@media (max-width:760px){.nav ul{display:none}}
+
+/* hero */
+.hero{padding-block:44px 28px}
+.hero .grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,.9fr);gap:28px;align-items:end}
+@media (max-width:820px){.hero .grid{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(1.7rem,3.6vw,2.5rem);font-weight:700;letter-spacing:-.015em}
+.hero .lead{color:var(--muted);max-width:60ch;margin-top:12px;font-size:1.02rem}
+.find{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.find label{font-weight:600;font-size:.95rem}
+.find .row{display:flex;gap:8px;margin-top:10px}
+.find input{flex:1;min-width:0;font:inherit;font-size:1rem;padding:11px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.find .hint{font-size:.8rem;color:var(--muted);margin-top:8px}
+.find .result{margin-top:12px;display:none;align-items:center;gap:10px;flex-wrap:wrap;font-size:.92rem}
+.find .result.show{display:flex}
+.stats{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:22px}
+.stat{min-width:0}
+.stat .v{font-size:1.5rem;font-weight:600;letter-spacing:-.01em}
+.stat .v small{font-size:.8rem;font-weight:500;color:var(--muted);margin-left:2px}
+.stat .l{font-size:.78rem;color:var(--muted)}
+
+section{padding-block:36px}
+.sec-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:14px}
+.sec-h p{color:var(--muted);font-size:.92rem;max-width:72ch}
+
+/* map */
+.maprow{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.maprow{grid-template-columns:1fr}}
+.mapcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.mapwrap{position:relative}
+#leafmap{height:600px;width:100%;background:var(--surface-2)}
+@media (max-width:860px){#leafmap{height:440px}}
+.map-ui{position:absolute;z-index:500;display:flex;flex-wrap:wrap;gap:6px}
+.map-ui.tl{top:12px;left:12px;right:110px}
+.map-ui.tr{top:12px;right:12px;flex-direction:column;align-items:stretch;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.map-ui.tr .chip{border:0;border-radius:0;box-shadow:none;justify-content:center;padding:6px 12px}
+.map-ui.tr .chip+.chip{border-top:1px solid var(--line)}
+.leaflet-top.leaflet-right{margin-top:76px}
+.tiles-dark .leaflet-tile-pane{filter:brightness(.62) invert(1) contrast(2.6) hue-rotate(195deg) saturate(.35) brightness(.78)}
+.tilenote{display:none;position:absolute;z-index:600;left:50%;top:50%;transform:translate(-50%,-50%);max-width:min(360px,80%);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:.84rem;color:var(--muted);text-align:center;pointer-events:none}
+.tiles-failed+.tilenote{display:block}
+.chip{border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 92%,transparent);color:var(--fg);border-radius:999px;padding:5px 12px;font:inherit;font-size:.8rem;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.chip .sw{width:9px;height:9px;border-radius:50%;background:var(--none)}
+.chip.is-on{border-color:var(--accent);background:var(--accent-soft)}
+.maplegend{position:absolute;z-index:500;left:12px;bottom:12px;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.76rem;color:var(--muted);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.maplegend b{color:var(--fg);font-weight:600}
+.maplegend .c{display:inline-block;border-radius:50%;background:var(--none);vertical-align:middle;margin-right:4px;opacity:.7}
+/* 지도 마커 */
+.zmark{display:grid;place-items:center;border-radius:50%;color:#fff;font-family:var(--font-mono);font-weight:500;font-size:12px;border:2.5px solid rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.25);cursor:pointer;transition:transform .15s,opacity .15s;position:relative}
+.zmark.selected{background:var(--sel)}
+.zmark.applied{background:var(--app)}
+.zmark.none{background:var(--none)}
+.zmark.excluded{background:repeating-linear-gradient(135deg,#9aa3ae 0 4px,#e6e9ee 4px 8px);color:#1b2230}
+.zmark.is-active{transform:scale(1.12);box-shadow:0 0 0 4px var(--accent),0 2px 10px rgba(0,0,0,.3)}
+.zmark.is-dim{opacity:.25}
+.leafmap-z14 .zmark.sm .zl{display:none}
+.zmark .zl{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:3px;white-space:nowrap;font-family:var(--font-sans);font-size:11px;font-weight:600;color:#1b2230;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff}
+@media (prefers-color-scheme: dark){.zmark .zl{color:#e7eaee;text-shadow:0 0 3px #0f1317,0 0 3px #0f1317,0 0 3px #0f1317}.zmark{border-color:rgba(20,24,30,.9)}}
+.leaflet-container{font-family:var(--font-sans)}
+.leaflet-tooltip.zt{font-family:var(--font-sans);font-size:.82rem;line-height:1.4;padding:6px 10px;border-radius:8px;background:var(--surface);color:var(--fg);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.leaflet-tooltip.zt::before{display:none}
+.leaflet-control-attribution{font-size:10px}
+.leaflet-bar a{color:#1b2230}
+.cpt{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 14px;font-size:.78rem;color:var(--muted);border-top:1px solid var(--line)}
+.cpt b{color:var(--fg);font-weight:600}
+
+/* panel */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0;position:sticky;top:72px}
+@media (max-width:860px){.panel{position:static}}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:.76rem;font-weight:600}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.selected{background:var(--sel-soft);color:var(--sel)}
+.pill.applied{background:var(--app-soft);color:var(--app)}
+.pill.none{background:var(--surface-2);color:var(--none)}
+.pill.excluded{background:var(--surface-2);color:var(--muted)}
+.pill.unknown{background:var(--surface-2);color:var(--unk)}
+.panel h3{font-size:1.25rem;font-weight:600;margin-top:8px}
+.panel .cx{color:var(--muted);font-size:.92rem;margin-top:2px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:14px;font-size:.9rem}
+.kv dt{color:var(--muted);white-space:nowrap}
+.kv dd{margin:0;min-width:0}
+.steps{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.steps li{display:grid;grid-template-columns:18px 1fr;gap:10px;font-size:.88rem;align-items:start}
+.steps .mk{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);margin-top:4px;background:var(--surface)}
+.steps li.done .mk{background:var(--sel);border-color:var(--sel)}
+.steps li.now .mk{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.steps .when{display:block;color:var(--muted);font-size:.78rem}
+.notes{margin:14px 0 0;padding-left:18px;font-size:.86rem}
+.notes li{margin-top:4px}
+.srcs{margin-top:14px;font-size:.78rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.panel .empty{color:var(--muted);font-size:.9rem;margin-top:8px}
+.panel .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.panel .quick button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:5px 10px;font:inherit;font-size:.82rem;cursor:pointer}
+
+/* timeline */
+.tlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px 40px}
+.tl{list-style:none;margin:0;padding:0;border-left:2px solid var(--line);margin-left:7px}
+.tl li{position:relative;padding:0 0 18px 22px}
+.tl li::before{content:"";position:absolute;left:-8px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--line)}
+.tl li.done::before{background:var(--sel);border-color:var(--sel)}
+.tl li.now::before{border-color:var(--accent);background:var(--accent-soft);box-shadow:0 0 0 3px var(--accent-soft)}
+.tl li.plan::before{border-style:dashed}
+.tl .when{font-family:var(--font-mono);font-size:.78rem;color:var(--muted)}
+.tl .what{font-weight:600;margin-top:1px}
+.tl .how{color:var(--muted);font-size:.88rem;max-width:68ch}
+.tl .tag{font-size:.7rem;font-weight:600;letter-spacing:.04em;color:var(--accent);margin-left:6px}
+
+/* roadmap */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0}
+.two{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr);gap:18px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.ctrl{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;font-size:.88rem}
+.ctrl input[type=range]{width:min(300px,100%);accent-color:var(--accent)}
+.ctrl output{font-family:var(--font-mono);font-weight:500;min-width:7ch}
+.preset{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:4px 10px;font:inherit;font-size:.8rem;cursor:pointer}
+.preset.is-on{border-color:var(--accent);background:var(--accent-soft)}
+.chart{margin-top:14px;overflow-x:auto}
+.chart svg{display:block;height:auto}
+.bar-done{fill:var(--sel)}
+.bar-plan{fill:var(--accent);opacity:.55}
+.bar-over{fill:var(--app);opacity:.7}
+.grid{stroke:var(--line);stroke-width:1}
+.ax{font-family:var(--font-mono);font-size:11px;fill:var(--muted)}
+.cum{fill:none;stroke:var(--fg);stroke-width:2}
+.cumdot{fill:var(--fg)}
+.goal{stroke:var(--app);stroke-width:1.5;stroke-dasharray:5 4}
+.goallbl{font-family:var(--font-sans);font-size:11px;fill:var(--app);font-weight:600}
+.verdict{margin-top:12px;font-size:.98rem}
+.verdict .bad{color:var(--app);font-weight:600}
+.verdict .ok{color:var(--sel);font-weight:600}
+.clegend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:.78rem;color:var(--muted)}
+.clegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+/* 이주 규모 */
+.stack{display:flex;height:34px;border-radius:8px;overflow:hidden;margin-top:12px;border:1px solid var(--line)}
+.stack div{min-width:2px}
+.s-sel{background:var(--sel)}.s-app{background:var(--app)}
+.s-exc{background:repeating-linear-gradient(135deg,var(--excl) 0 4px,var(--surface) 4px 8px)}
+.s-unk{background:var(--unk);opacity:.55}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px;font-size:.84rem}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* FAQ */
+.faq{display:grid;gap:10px}
+.faq .faq-g{margin-top:14px;margin-bottom:-2px}
+.faq .faq-g:first-child{margin-top:0}
+.faq details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 18px}
+.faq summary{cursor:pointer;padding:14px 0;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";color:var(--muted);font-weight:400}
+.faq details[open] summary::after{content:"−"}
+.faq .a{padding:0 0 16px;font-size:.93rem;max-width:72ch}
+.faq .a p+p{margin-top:6px}
+
+/* 의회 */
+.council{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr);gap:18px}
+@media (max-width:860px){.council{grid-template-columns:1fr}}
+.council ul{margin:10px 0 0;padding-left:18px;font-size:.93rem}
+.council li{margin-top:6px}
+.council .meta{font-size:.82rem;color:var(--muted);margin-top:10px}
+.agenda{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px;font-size:.9rem}
+.agenda li{display:grid;grid-template-columns:auto 1fr;gap:10px}
+.agenda li::before{content:"□";color:var(--muted)}
+
+/* table */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+td.r,th.r,td:first-child,.pill{white-space:nowrap}
+table{min-width:1100px}
+th{font-size:.74rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2)}
+tr:last-child td{border-bottom:none}
+td.r,th.r{text-align:right}
+.dim{color:var(--muted)}
+footer{border-top:1px solid var(--line);padding-block:24px 48px;font-size:.8rem;color:var(--muted)}
+footer p+p{margin-top:6px}
+footer .wrap{max-width:1160px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<nav class="nav" aria-label="주요 메뉴">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>둔산 재건축 트래커</a>
+    <ul>
+      <li><a href="#map">구역 현황</a></li>
+      <li><a href="#timeline">절차·일정</a></li>
+      <li><a href="#roadmap">10년 로드맵</a></li>
+      <li><a href="#faq">자주 묻는 질문</a></li>
+      <li><a href="#council">시의회 논의</a></li>
+      <li><a href="#data">자료</a></li>
+    </ul>
+    <span class="upd">업데이트 2026.10.21</span>
+  </div>
+</nav>
+
+<header class="hero wrap" id="top">
+  <div class="grid">
+    <div>
+      <div class="eyebrow">둔산지구 노후계획도시 정비 · 2026–2035</div>
+      <h1 style="margin-top:10px">둔산 17개 구역은 2035년까지 순서대로 계획을 세우고, 2040년 준공을 목표로 합니다</h1>
+      <p class="lead">2026년 7월 1차 선도지구로 13·14구역이 선정됐습니다. 나머지 15개 구역도 연차별 정비물량에 따라 뒤따르며, 대전시는 2035년까지 전 구역의 정비계획 수립을 마치고 단계별 이주계획에 따라 2040년 준공을 목표로 밝혔습니다. 48개 단지 중 내 단지가 어느 구역이고, 지금 어느 단계이며, 이주는 언제쯤인지 확인하세요.</p>
+      <div class="stats">
+        <div class="stat"><div class="v num">17<small>구역</small></div><div class="l">특별정비예정구역 · 48개 단지</div></div>
+        <div class="stat"><div class="v num">48,721<small>세대</small></div><div class="l">총 이주수요</div></div>
+        <div class="stat"><div class="v num">5,252<small>세대</small></div><div class="l">1차 선도지구 (10.8%)</div></div>
+        <div class="stat"><div class="v num">226→360<small>%</small></div><div class="l">기준용적률</div></div>
+      </div>
+    </div>
+    <div class="find">
+      <label for="q">내 단지 찾기</label>
+      <div class="row"><input id="q" list="aptlist" placeholder="단지 이름 — 예: 크로바, 샘머리2, 국화우성" autocomplete="off"><datalist id="aptlist"></datalist></div>
+      <p class="hint">둔산·월평·탄방동 17개 구역 48개 단지 전부 검색됩니다. 입력하면 지도와 상세 정보로 이동합니다.</p>
+      <div class="result" id="qres"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section id="map" class="wrap">
+  <div class="sec-h">
+    <h2>구역별 현황</h2>
+    <p>색은 현재 단계, 면은 단지 경계, 원 크기는 기존 세대수입니다. 구역을 누르면 현재 단계와 다음 절차가 나옵니다.</p>
+  </div>
+  <div class="maprow">
+    <div class="mapcard">
+      <div class="mapwrap">
+      <div class="map-ui tl" id="chips" role="group" aria-label="단계 필터">
+        <button class="chip is-on" data-f="all">전체</button>
+        <button class="chip" data-f="selected"><span class="sw" style="background:var(--sel)"></span>선도지구</button>
+        <button class="chip" data-f="applied"><span class="sw" style="background:var(--app)"></span>2차 공모 준비</button>
+        <button class="chip" data-f="none"><span class="sw"></span>순차 추진</button>
+        <button class="chip" data-f="excluded"><span class="sw" style="background:repeating-linear-gradient(135deg,var(--excl) 0 2px,transparent 2px 4px)"></span>공모 제외</button>
+      </div>
+      <div class="map-ui tr" role="group" aria-label="배경 지도">
+        <button class="basebtn chip is-on" data-b="map">지도</button>
+        <button class="basebtn chip" data-b="sat">위성</button>
+      </div>
+      <div id="leafmap" role="region" aria-label="둔산지구 구역 지도"></div>
+      <div class="tilenote">배경 지도 서버가 이 환경의 요청을 거부했습니다. 앱 안의 미리보기가 아니라 Chrome·Safari에서 직접 열거나 웹에 올리면 표시됩니다. 단지 경계와 구역 정보는 그대로 볼 수 있습니다.</div>
+      <div class="maplegend"><span><b>원 크기</b> 세대수</span><span><span class="c" style="width:9px;height:9px"></span>2,000 <span class="c" style="width:14px;height:14px"></span>5,000</span><span><b>면</b> 단지 경계</span></div>
+      </div>
+      <div class="cpt"><span><b>구역·단지 구성</b> 2035 기본계획(안) 표4-53</span><span><b>단지 경계</b> OpenStreetMap · 번호 원은 구역 중심</span></div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+</section>
+
+<section id="timeline" class="wrap">
+  <div class="sec-h">
+    <h2>절차와 일정</h2>
+    <p>왼쪽은 둔산지구 전체 일정, 오른쪽은 선도지구(13·14구역)가 앞으로 밟을 단계입니다. 날짜가 없는 항목은 대전시나 추진위가 밝힌 목표입니다.</p>
+  </div>
+  <div class="tlgrid">
+    <div><div class="eyebrow" style="margin-bottom:10px">지구 전체</div><ol class="tl" id="tl-all"></ol></div>
+    <div><div class="eyebrow" style="margin-bottom:10px">선도지구 후속 절차</div><ol class="tl" id="tl-sel"></ol></div>
+  </div>
+</section>
+
+<section id="roadmap" class="wrap">
+  <div class="sec-h">
+    <h2>10년 로드맵</h2>
+    <p>기본계획은 이주수요 48,721세대를 10년에 걸쳐 연평균 약 4,900세대씩 정비한다고 잡았고, 대전시는 2027년부터 둔산에서 연 4,000세대 규모를 선정하겠다고 밝혔습니다. 연간 물량을 바꾸면 전 구역 선정이 끝나는 해가 달라집니다. 선정 뒤 특별정비계획·조합·인가·이주·공사를 거치므로 준공은 그보다 늦고, 시는 지구 전체 준공 목표를 2040년으로 잡았습니다.</p>
+  </div>
+  <div class="two">
+    <div class="card">
+      <div class="ctrl">
+        <label for="pace">연간 선정 물량</label>
+        <input type="range" id="pace" min="2000" max="7000" step="100" value="4900">
+        <output for="pace" id="paceOut">4,900세대</output>
+        <button class="preset" data-v="4000">시 발표 4,000</button>
+        <button class="preset is-on" data-v="4900">기본계획 4,900</button>
+      </div>
+      <div class="chart" id="chart"></div>
+      <div class="clegend"><span><i style="background:var(--sel)"></i>2026 실적</span><span><i style="background:var(--accent);opacity:.55"></i>계획 물량</span><span><i style="background:var(--app);opacity:.7"></i>2035 이후</span><span><i style="background:var(--fg)"></i>누적</span></div>
+      <p class="verdict" id="verdict"></p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">이주수요 48,721세대의 현재 상태</div>
+      <div class="stack" id="stack" role="img" aria-label="상태별 세대수 비율"></div>
+      <div class="legend">
+        <span><i style="background:var(--sel)"></i>선도지구 <b class="num">5,252</b></span>
+        <span><i style="background:var(--app)"></i>2차 공모 준비 <b class="num">23,083</b></span>
+        <span><i class="s-exc"></i>1차 공모 제외 <b class="num">5,524</b></span>
+        <span><i style="background:var(--none);opacity:.55"></i>순차 추진 예정 <b class="num">14,862</b></span>
+      </div>
+      <dl class="kv" style="margin-top:18px">
+        <dt>이주 시점</dt><dd>특별정비구역 지정 → 조합설립 → 사업시행·관리처분 인가 뒤에 시작됩니다. 13구역 추진위는 3~4년 내 이주를 목표로 밝혔습니다.</dd>
+        <dt>이주 대책</dt><dd>이주단지 조성, 순환용 주택 공급, 이주비·임차료 지원이 거론됩니다. 세부 방안은 대전시 후속 계획을 확인해야 합니다.</dd>
+        <dt>연간 분산</dt><dd>특정 연도에 이주가 몰리지 않도록 연도별 정비예정물량 상한을 두고 그 150% 안에서 구역을 선정합니다.</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="wrap">
+  <div class="sec-h">
+    <h2>자주 묻는 질문</h2>
+    <p>대전시가 배포한 노후계획도시정비 FAQ(2026.1)와 기본계획(안)의 내용을 주민 질문 순서로 정리했습니다.</p>
+  </div>
+  <div class="faq">
+    <div class="eyebrow faq-g">일정과 절차</div>
+    <details open>
+      <summary>전체 사업은 언제 시작해서 언제 끝나나요?</summary>
+      <div class="a"><p>대전시 FAQ 기준으로 2026년 선도지구의 특별정비계획 수립을 시작으로 2035년까지 전체 구역의 정비계획 수립을 완료하고, 단계별 이주계획에 따라 <b>2040년 준공</b>을 목표로 합니다. 시는 사업 시기가 여건에 따라 달라질 수 있다고 덧붙였습니다.</p><p>즉 "10년"은 모든 구역이 계획을 받는 기간이고, 실제 이주와 공사는 그 뒤에 이어집니다. 구역마다 선정 연도가 다르니 위 로드맵과 구역 상세의 "이주 시점"을 함께 보세요.</p></div>
+    </details>
+    <details>
+      <summary>1차에 선정되지 않았으면 재건축을 못 하나요?</summary>
+      <div class="a"><p>아닙니다. 대전시는 2027년부터 둔산에서 해마다 약 4,000세대 규모를 추가 선정하고 10년 안에 모든 구역을 순차 정비한다고 밝혔습니다. 1구역처럼 이미 2차 공모를 준비하는 구역도 있습니다.</p><p>다만 연간 물량이 4,000세대면 2035년 안에 전 구역 선정이 끝나지 않습니다. 위 로드맵에서 확인할 수 있습니다.</p></div>
+    </details>
+    <details>
+      <summary>선도지구가 되면 무엇이 달라지고, 그 다음은 뭘 해야 하나요?</summary>
+      <div class="a"><p>안전진단 면제, 통합심의, 용적률 특례(법적상한 최대 150% 상향)가 적용돼 사업 기간이 줄어듭니다.</p><p>선정 뒤에는 특별정비예정구역 내 토지등소유자 과반수의 동의서를 첨부해 선도지구 지정과 특별정비구역 지정(특별정비계획 수립 포함)을 신청합니다. 신탁사나 공공기관을 예비사업시행자로 두려면 역시 과반수 동의가 필요합니다. 고시가 나면 「도시 및 주거환경정비법」 절차(조합 설립 → 사업시행계획 인가 → 관리처분계획 인가 → 이주·착공)로 넘어갑니다. 공모 신청 때 뽑은 대표자는 이 단계의 대표자가 아니며, 주민대표단을 새로 구성합니다.</p></div>
+    </details>
+    <details>
+      <summary>1차 선정 평가는 어떤 기준이었나요?</summary>
+      <div class="a"><p>국토교통부 고시(제2024-559호)를 바탕으로 100점 만점입니다. <b>주민 동의율 70점</b>(50%면 10점, 100%면 70점), <b>정주환경 개선 시급성 10점</b>(세대당 주차대수·소방활동 불편성·건축물 연령·세대당 복리시설 면적 각 2.5점), <b>도시기능 활성화 10점</b>(공원 등 기반시설 부지 기부채납 0~5%에 0~5점, 기본점수 5점), <b>파급효과 10점</b>(통합 단지 수 2~5점, 통합 세대수 2~5점).</p><p>선정 물량은 둔산 5,000세대(지구의 10.2%)에 최대 50%를 더한 7,500세대까지였습니다. 신청 9개 구역의 평균 동의율은 89%, 선정된 13·14구역은 평균 96.2%였습니다. 기부채납 가점을 받은 구역은 그 내용을 특별정비계획에 반드시 반영해야 합니다.</p></div>
+    </details>
+    <div class="eyebrow faq-g">내 단지와 구역</div>
+    <details>
+      <summary>우리 단지만 빼거나, 구역을 나눌 수 있나요?</summary>
+      <div class="a"><p>안 됩니다. 시 FAQ는 특별정비예정구역이 법령과 기본방침에 따라 설정됐고, 선도지구 신청은 공고된 구역 전체를 대상으로 하며 구역을 분할하거나 일부를 제외할 수 없다고 못박았습니다. 단지 간 분쟁이 있어도 대가구 단위 통합정비가 원칙이라 전체 단지를 하나로 정비해야 합니다. 공람 때 낸 의견은 규정에 따라 검토됩니다.</p></div>
+    </details>
+    <details>
+      <summary>4구역(둔산주공·은뜰마을)과 12구역(보라)은 왜 1차 공모에서 빠졌나요?</summary>
+      <div class="a"><p>두 구역 모두 임대아파트가 섞여 있습니다. 시 FAQ는 임대 혼합 구역은 임대인의 이주대책 마련 등으로 신속한 추진이 어려워 <b>이번 공모에서만</b> 제외했을 뿐, 다음 해부터 주민제안 등을 통해 정비사업 추진이 가능하다고 설명합니다.</p></div>
+    </details>
+    <details>
+      <summary>동의율은 어떻게 세나요? 상가도 포함되나요?</summary>
+      <div class="a"><p>동의 대상은 구역 안의 공동주택뿐 아니라 상가(근린생활시설), 복리시설(유치원 등), 개별 건축물의 <b>전체 토지등소유자</b>입니다. 사람 수는 「도시 및 주거환경정비법 시행령」 기준으로 셉니다. 한 집을 여럿이 공유하면 1인, 한 사람이 여러 채를 가져도 1인, 국가·지자체 소유는 제외입니다.</p><p>공모 신청 요건은 구역 전체 50% 이상과 주택단지별 50% 이상 동의였습니다. 서면 동의는 본인이 성명을 쓰고 서명 또는 날인(가급적 지장)해야 하며, 서면과 전자 동의를 중복 제출하면 하나만 인정됩니다.</p></div>
+    </details>
+    <details>
+      <summary>12구역과 17구역은 왜 "시설 정비형"인가요?</summary>
+      <div class="a"><p>특별정비예정구역은 네 유형으로 나뉩니다. 주택단지 정비형(25m 이상 도로로 구획된 블록 안 단지들을 통합 정비), 중심지구 정비형(역세권·상업지 고밀 복합개발), 시설 정비형(기반시설 개선·자족기능 보강이 필요한 곳), 이주대책 지원형(이주단지 조성). 둔산은 15곳이 주택단지 정비형, 12·17구역이 시설 정비형입니다.</p><p>12구역은 11구역과 도로로 나뉘지 않아 원칙상 통합 대상이지만, 둔산3동 행정복지센터·사회복지관을 포함한 복합커뮤니티와 벤처집적·문화·교육연구 시설을 두기 위해 분리했습니다. 17구역은 탄방역에서 떨어져 있어 결합개발로 유도하기 위해 별도 기준용적률 375%를 적용하고, 공영주차장과 생활복리·업무 시설을 계획했습니다.</p></div>
+    </details>
+    <div class="eyebrow faq-g">용적률과 비용</div>
+    <details>
+      <summary>기준용적률 360%는 어떻게 정해졌나요?</summary>
+      <div class="a"><p>기준용적률은 기반시설 용량 안에서 허용되는 적정 개발 밀도입니다. 시는 공원·상수도·하수도·학교 용량을 각각 검토해 가장 여유가 적은 시설을 기준으로 수용 가능한 인구를 정했습니다. 둔산은 <b>공원</b>이 가장 빠듯해서, 부족한 공원 59,724㎡를 공원 녹지축을 따라 추가 확보하는 계획을 전제로 360%를 산정했습니다.</p><p>둔산의 현재 용적률은 약 226%입니다. 기본계획은 7만4,000세대를 9만4,000~9만5,000세대로 늘릴 수 있게 했고, 늘어난 세대가 분담금 부담을 낮추는 재원이 되지만 공공기여와 기반시설 부담이 함께 따라옵니다. 구역별로는 통합1~15구역 363%, 16구역(녹원·은하수, 제2종일반주거지역) 288%, 17구역(시설 정비형) 375%이며, 특별법에 따라 법적 상한의 150%까지 허용될 수 있습니다. 최종 수치는 기본계획 고시로 확정됩니다.</p></div>
+    </details>
+    <details>
+      <summary>공공기여금은 얼마이고 언제 내나요?</summary>
+      <div class="a"><p>기본계획(안)에 적힌 공공기여 금액은 국토교통부 가이드라인에 따라 <b>임시로 추정</b>한 값이고, 확정 금액이 아닙니다. 단계별로 좁혀집니다. 기본계획에서 지구 전체 추정 → 특별정비계획에서 구역별 산정과 방식(기반시설 설치, 현금 납부 등) 협의 → 사업시행계획 인가 때 감정평가로 확정 → <b>준공검사 신청일 이전까지</b> 대전시에 납부.</p><p>기본계획이 정한 도로 확폭은 반드시 이행해야 하고, 생활SOC 시설 규모 같은 세부 사항은 특별정비계획 단계에서 구역별로 정합니다. 구역별 기반시설 계획은 구역 상세와 아래 표에 있습니다.</p></div>
+    </details>
+    <details>
+      <summary>공사 중 아이들 통학은 어떻게 되나요?</summary>
+      <div class="a"><p>둔산은 학원가와 트램(2호선) 공사가 겹치는 지역이라 이주·착공 시 통학로 안전 대책이 필요하다는 지적이 시의회에서 나왔습니다. 구역별 공사 시기와 통학로 대책은 특별정비계획 단계에서 구체화됩니다. 기본계획은 2035년 사업 완료를 가정해 학급당 28명 기준으로 초·중학교 수용을 검토했고, 일부 학교는 학생 배치 조정이 필요하다고 봤습니다.</p></div>
+    </details>
+  </div>
+</section>
+
+<section id="council" class="wrap">
+  <div class="sec-h">
+    <h2>시의회 논의</h2>
+    <p>대전시의회에서 둔산 정비사업을 두고 제기된 요구와 앞으로의 점검 일정입니다.</p>
+  </div>
+  <div class="council">
+    <div class="card">
+      <div class="eyebrow">2026.7.24 · 제297회 임시회 5분 자유발언 · 김신웅 의원(서구 5)</div>
+      <ul>
+        <li>이 사업이 10년짜리 장기 계획이라는 사실을 지금보다 훨씬 적극적으로 알려야 한다. 대다수 주민이 이를 모른 채 낙담하고 있고, 오해가 쌓이면 지역 간 위화감과 행정 불신으로 이어진다.</li>
+        <li>이주단지 조성, 순환용 주택 공급, 이주비·임차료 지원 등 이주대책을 대전시가 직접 책임지고 준비해야 한다.</li>
+        <li>학생 밀도가 높은 둔산은 트램 공사까지 겹치므로 착공·이주 시 통학로 안전 대책을 세심하게 마련해야 한다.</li>
+      </ul>
+      <p class="meta">공청회·주민설명회 확대, 온라인 안내, 찾아가는 설명회, 소식지 발송이 소통 수단으로 제안됐습니다. <a href="https://m.news.nate.com/view/20260724n21171" target="_blank" rel="noopener">뉴시스 보도</a></p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">다음 점검 · 2026.11.6~17 행정사무감사</div>
+      <p style="margin-top:8px;font-size:.92rem">제10대 시의회 첫 행정사무감사. 산업건설위원회 소관 도시주택국에서 확인될 사항:</p>
+      <ul class="agenda">
+        <li>선도지구 특별정비구역 연내 지정 진행률</li>
+        <li>2027년 정비예정물량 확정치(시 발표 4,000 vs 기본계획 4,900)</li>
+        <li>이주대책 세부안과 이주단지 후보지</li>
+        <li>1차 공모 제외 구역(4·12)의 정비 방식</li>
+        <li>12·17구역(시설 정비형) 자족시설 계획과 공공기여 산정 기준</li>
+        <li>2040 준공 목표에 맞춘 단계별 이주계획과 이주단지 후보지</li>
+      </ul>
+      <p class="meta"><a href="https://m.inews24.com/v/2016491" target="_blank" rel="noopener">아이뉴스24 · 시의회 개원 100일</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="data" class="wrap">
+  <div class="sec-h">
+    <h2>구역별 자료</h2>
+    <p>구역 구성과 세대수는 기본계획(안) 표4-53, 선정·신청 현황은 국토교통부·대전시 발표와 언론 보도입니다.</p>
+  </div>
+  <div class="tablewrap">
+    <table id="dtable">
+      <thead><tr><th>구역</th><th>단지 (세대)</th><th class="r">기존 세대</th><th class="r">예정구역 면적</th><th class="r">종전→기준 용적률</th><th>기반시설 계획</th><th>단계</th><th>출처</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>둔산 재건축 트래커는 국토교통부·대전광역시 발표와 언론 보도를 바탕으로 정리한 안내 페이지입니다. 대전광역시·대전시의회의 공식 자료가 아니며, 확정 내용은 대전시 도시주택정보와 시의회 회의록을 확인하세요.</p>
+    <p>구역 구성·세대수·면적·종전용적률은 「2035 대전 노후계획도시정비 기본계획(안)」 둔산지구 주민공람본(2025.11, 표4-48·4-53)을 따랐습니다. 공람안은 확정 전 계획으로, 2026.8 고시본과 수치가 다를 수 있습니다. 단지 경계는 OpenStreetMap 데이터(2026.10 조회)입니다.</p>
+    <p>배경 지도 © OpenStreetMap contributors (ODbL) · 위성영상 © Esri, Maxar, Earthstar Geographics</p>
+  </div>
+</footer>
+
+<!-- 구역 데이터. geocode.mjs가 이 블록의 lat/lng/pts를 갱신합니다. -->
+<script id="zone-data" type="application/json">
+{"updated":"2026-10-21","total":48721,"zones":[{"id":1,"dong":"월평동","type":"주택단지 정비형","single":false,"cx":["상록수","상아","초원","강변"],"units":3899,"area":197728,"site":149374,"far":229,"baseFar":363,"status":"applied","lat":36.36819,"lng":127.377571,"notes":["1차 공모 신청, 미선정.","2차 선도지구 재도전 중. 소유주 과반 동의를 모아 주민대표단 구성 승인 신청을 준비(2026.9).","강변·상아의 별도 재건축 추진 움직임이 보도됐으나, 시 FAQ상 특별정비예정구역은 분할하거나 일부 단지를 제외할 수 없고 전체를 하나로 정비해야 한다."],"src":["jd0715","jd0917","plan2025","faq2026"],"pts":[{"name":"상록수","units":1161,"osm":"way/494682927","lat":36.366087,"lng":127.37818},{"name":"상아","units":720,"osm":"way/494682931","lat":36.36973,"lng":127.378104},{"name":"초원","units":1230,"osm":"way/494682928","lat":36.368245,"lng":127.378065},{"name":"강변","units":788,"osm":"way/494682930","lat":36.3687,"lng":127.375935}],"rings":[[[36.366292,127.376794],[36.365256,127.376796],[36.365255,127.376901],[36.365245,127.379189],[36.367199,127.379195],[36.367237,127.379143],[36.367236,127.378702],[36.36726,127.378544],[36.367255,127.377977],[36.366294,127.37799],[36.366292,127.376794]],[[36.368997,127.376852],[36.368989,127.379141],[36.368967,127.379238],[36.369241,127.379206],[36.369348,127.37921],[36.370654,127.379226],[36.370704,127.379199],[36.370718,127.379065],[36.370483,127.378108],[36.370277,127.377353],[36.370125,127.376844],[36.368997,127.376852]],[[36.367488,127.379202],[36.367529,127.379265],[36.36759,127.37927],[36.368933,127.379276],[36.368967,127.379238],[36.368989,127.379141],[36.368997,127.376852],[36.367501,127.376846],[36.367488,127.379202]],[[36.367501,127.376846],[36.367507,127.375248],[36.36771,127.375247],[36.368338,127.37525],[36.36834,127.375066],[36.368914,127.374319],[36.369202,127.374794],[36.36956,127.375431],[36.369835,127.376026],[36.370024,127.376531],[36.370125,127.376844],[36.368997,127.376852],[36.367501,127.376846]]],"infra":"도로 확폭"},{"id":2,"dong":"월평동","type":"주택단지 정비형","single":false,"cx":["한아름","무궁화"],"units":1410,"area":91996,"site":80490,"far":228,"baseFar":363,"status":"none","lat":36.36361,"lng":127.376736,"notes":["1차 공모 미신청. 연차별 정비예정물량에 따라 순차 추진."],"src":["aru0331","plan2025"],"pts":[{"name":"한아름","units":780,"osm":"way/79213403","lat":36.363463,"lng":127.375502},{"name":"무궁화","units":630,"osm":"way/79213404","lat":36.363757,"lng":127.37797}],"rings":[[[36.364544,127.374497],[36.364543,127.374655],[36.364528,127.376539],[36.363872,127.376532],[36.363734,127.376484],[36.3634,127.376485],[36.363272,127.376546],[36.363231,127.376546],[36.362952,127.376544],[36.362457,127.37654],[36.362396,127.37644],[36.362404,127.375608],[36.362376,127.375468],[36.362383,127.374544],[36.362434,127.374486],[36.362731,127.374533],[36.363056,127.374529],[36.363065,127.374528],[36.363227,127.374482],[36.363365,127.374483],[36.363571,127.374488],[36.363845,127.374489],[36.364311,127.374495],[36.364544,127.374497]],[[36.364519,127.376774],[36.364497,127.379145],[36.36425,127.379146],[36.364063,127.379146],[36.362998,127.379155],[36.363002,127.376776],[36.363687,127.376775],[36.36378,127.376775],[36.363863,127.376775],[36.363997,127.376775],[36.364519,127.376774]]],"infra":"도로 확폭"},{"id":3,"dong":"월평동","type":"주택단지 정비형","single":false,"cx":["하나로","다모아","전원","진달래"],"units":4050,"area":196275,"site":159310,"far":227,"baseFar":363,"status":"none","lat":36.360257,"lng":127.36585,"notes":["1차 공모 미신청. 월평동 북서측 4개 단지 통합.","전원아파트 종전용적률 283%로 지구 내 최고 수준."],"src":["aru0331","plan2025"],"pts":[{"name":"하나로","units":1350,"osm":"way/422748500","lat":36.360803,"lng":127.365003},{"name":"다모아","units":1260,"osm":"way/79213439","lat":36.361987,"lng":127.366801},{"name":"전원","units":360,"osm":"way/79213401","lat":36.359191,"lng":127.364722},{"name":"진달래","units":1080,"osm":"way/79213421","lat":36.359048,"lng":127.366873}],"rings":[[[36.360148,127.363853],[36.360252,127.363738],[36.360771,127.363254],[36.361,127.363043],[36.361337,127.363502],[36.361756,127.364214],[36.362123,127.364952],[36.362095,127.364974],[36.361977,127.365069],[36.36196,127.365081],[36.361945,127.365092],[36.361737,127.365255],[36.361725,127.365265],[36.361594,127.365368],[36.36143,127.365497],[36.361418,127.365506],[36.361356,127.365556],[36.361201,127.365678],[36.360967,127.365672],[36.360963,127.366985],[36.360403,127.366983],[36.360403,127.366783],[36.35996,127.366782],[36.359974,127.364659],[36.359972,127.364499],[36.35997,127.364351],[36.360023,127.364351],[36.360082,127.364315],[36.360121,127.364279],[36.360069,127.364166],[36.36005,127.36405],[36.360093,127.363948],[36.360148,127.363853]],[[36.360963,127.366985],[36.360967,127.365672],[36.361201,127.365678],[36.361356,127.365556],[36.361418,127.365506],[36.36143,127.365497],[36.361594,127.365368],[36.361725,127.365265],[36.361737,127.365255],[36.361945,127.365092],[36.36196,127.365081],[36.361977,127.365069],[36.362095,127.364974],[36.362123,127.364952],[36.363261,127.367187],[36.363338,127.367329],[36.363265,127.367394],[36.36324,127.367416],[36.362947,127.367677],[36.362597,127.367988],[36.362435,127.36811],[36.362269,127.368207],[36.362244,127.368222],[36.362065,127.368293],[36.361985,127.368292],[36.361887,127.368292],[36.361463,127.368289],[36.361199,127.36829],[36.361199,127.368014],[36.361197,127.366989],[36.360963,127.366985]],[[36.359778,127.365337],[36.358524,127.365353],[36.358681,127.364106],[36.358991,127.364109],[36.3591,127.364066],[36.359171,127.364068],[36.359278,127.36407],[36.359725,127.364077],[36.359785,127.364152],[36.359778,127.365337]],[[36.359778,127.365337],[36.359772,127.36824],[36.359713,127.368304],[36.359338,127.368305],[36.359237,127.368268],[36.358903,127.36827],[36.358613,127.368271],[36.358613,127.368307],[36.35814,127.368305],[36.358413,127.366205],[36.358524,127.365353],[36.359778,127.365337]]],"infra":"공원 (진달래 내 약 8,100㎡, 갑천초 남측)"},{"id":4,"dong":"월평동","type":"주택단지 정비형","single":false,"cx":["둔산주공1단지","은뜰마을(주공2단지)","둔산주공3단지"],"units":4024,"area":135990,"site":95088,"far":197,"baseFar":363,"status":"excluded","lat":36.363634,"lng":127.370751,"notes":["1차 선도지구 공모 대상에서 제외(12구역과 함께). 시 FAQ: 임대아파트가 섞인 구역은 임대인 이주대책 마련 등으로 신속 추진이 어려워 이번 공모에서만 제외했으며, 다음 해부터 주민제안 등으로 추진할 수 있다.","기본계획: 주공1·3단지(임대) 사이에 은뜰마을2단지(분양)가 도로로 구획되지 않아 하나의 구역으로 지정. 종전용적률 197%로 지구 내 가장 낮음."],"src":["aru0331","namu","plan2025","faq2026"],"pts":[{"name":"둔산주공1단지","units":1491,"osm":"way/79213423","lat":36.363366,"lng":127.368968},{"name":"은뜰마을(주공2단지)","units":1130,"osm":"way/79213436","lat":36.36348,"lng":127.370652},{"name":"둔산주공3단지","units":1403,"osm":"way/79213429","lat":36.364055,"lng":127.372632}],"rings":[[[36.362377,127.369837],[36.362377,127.369712],[36.36238,127.369478],[36.362382,127.369342],[36.362386,127.368943],[36.362403,127.368772],[36.362445,127.368614],[36.362473,127.368538],[36.362521,127.368447],[36.362575,127.368365],[36.362711,127.368203],[36.363432,127.367567],[36.363453,127.367548],[36.364272,127.368898],[36.364461,127.369272],[36.364528,127.369612],[36.364534,127.369845],[36.363872,127.36986],[36.363808,127.369859],[36.363609,127.369856],[36.362377,127.369837]],[[36.362538,127.371239],[36.362381,127.371236],[36.36238,127.371031],[36.362405,127.370812],[36.362406,127.370754],[36.362407,127.370315],[36.362377,127.370188],[36.362377,127.369935],[36.362377,127.369837],[36.363609,127.369856],[36.363808,127.369859],[36.363872,127.36986],[36.364534,127.369845],[36.36454,127.371416],[36.363472,127.371435],[36.362663,127.371442],[36.362663,127.371303],[36.362538,127.371239]],[[36.36454,127.371416],[36.364547,127.373135],[36.364542,127.373593],[36.364261,127.373594],[36.364257,127.374204],[36.363712,127.374206],[36.363708,127.373057],[36.363786,127.373057],[36.363788,127.372473],[36.363477,127.372475],[36.363472,127.371435],[36.36454,127.371416]]],"infra":"도로 확폭"},{"id":5,"dong":"월평동","type":"주택단지 정비형","single":false,"cx":["황실타운","누리"],"units":3654,"area":250401,"site":176179,"far":231,"baseFar":363,"status":"none","lat":36.359937,"lng":127.371552,"notes":["1차 공모 미신청. 둔산 3위 규모(3,654세대).","기본계획: 황실타운 단지 내 공원 약 7,308㎡ 확보 계획."],"src":["aru0331","plan2025"],"pts":[{"name":"황실타운","units":1950,"osm":"way/79213407","lat":36.360955,"lng":127.371746},{"name":"누리","units":1704,"osm":"way/79213415","lat":36.358918,"lng":127.371358}],"rings":[[[36.359974,127.369838],[36.36216,127.369864],[36.362188,127.369913],[36.362173,127.372853],[36.362144,127.372889],[36.361623,127.372883],[36.361021,127.372876],[36.361019,127.374197],[36.36017,127.374197],[36.360027,127.374195],[36.35996,127.374172],[36.359926,127.374098],[36.359924,127.373644],[36.359929,127.37245],[36.359932,127.371833],[36.359939,127.369923],[36.359951,127.369875],[36.359974,127.369838]],[[36.359759,127.368593],[36.359751,127.370767],[36.359721,127.370973],[36.359712,127.371897],[36.359735,127.372163],[36.359738,127.374132],[36.359683,127.374199],[36.358082,127.37418],[36.358097,127.371297],[36.358113,127.368915],[36.358115,127.368524],[36.358505,127.368527],[36.359712,127.368533],[36.359745,127.368555],[36.359759,127.368593]]],"infra":"공원 (황실타운 내 약 7,308㎡)"},{"id":6,"dong":"월평동","type":"주택단지 정비형","single":false,"cx":["백합","샛별","무지개"],"units":1672,"area":86731,"site":78318,"far":239,"baseFar":363,"status":"none","lat":36.360265,"lng":127.375497,"notes":["1차 공모 미신청. 월평동 소규모 3개 단지 통합(1,672세대)."],"src":["aru0331","plan2025"],"pts":[{"name":"백합","units":622,"osm":"way/79213409","lat":36.361498,"lng":127.37551},{"name":"샛별","units":450,"osm":"way/79213419","lat":36.360405,"lng":127.375482},{"name":"무지개","units":600,"osm":"way/79213410","lat":36.358893,"lng":127.375499}],"rings":[[[36.362158,127.374531],[36.362156,127.37488],[36.362124,127.375021],[36.362119,127.375406],[36.36215,127.375557],[36.362149,127.376449],[36.362087,127.376532],[36.360847,127.376525],[36.360857,127.374483],[36.362129,127.37449],[36.362158,127.374531]],[[36.359975,127.374524],[36.360019,127.374477],[36.360857,127.374483],[36.360847,127.376525],[36.360024,127.376525],[36.359961,127.376447],[36.359975,127.374524]],[[36.359657,127.374476],[36.359708,127.374538],[36.359699,127.376459],[36.359638,127.376519],[36.358081,127.376519],[36.358086,127.374481],[36.359657,127.374476]]],"infra":"기본계획상 별도 지정 없음 (특별정비계획 단계에서 결정)"},{"id":7,"dong":"둔산동","type":"주택단지 정비형","single":false,"cx":["향촌","파랑새"],"units":2056,"area":103371,"site":83308,"far":234,"baseFar":363,"status":"applied","lat":36.355258,"lng":127.375535,"notes":["1차 공모 신청, 미선정. 특화설계를 강조한 구역으로 보도."],"src":["jd0715","gm0406","plan2025"],"pts":[{"name":"향촌","units":1650,"osm":"way/469843394","lat":36.354135,"lng":127.375533},{"name":"파랑새","units":406,"osm":"way/469832460","lat":36.35638,"lng":127.375536}],"rings":[[[36.355779,127.37451],[36.355775,127.376456],[36.355756,127.376512],[36.355717,127.376554],[36.352185,127.376523],[36.352143,127.37645],[36.352849,127.374541],[36.352869,127.374499],[36.352896,127.374465],[36.352944,127.374438],[36.353012,127.374427],[36.355691,127.374445],[36.355722,127.374454],[36.355755,127.374474],[36.355779,127.37451]],[[36.356796,127.37444],[36.356795,127.376586],[36.356038,127.376587],[36.355986,127.376579],[36.355956,127.376533],[36.355947,127.37647],[36.355957,127.374599],[36.355978,127.37453],[36.356019,127.374473],[36.356077,127.374446],[36.356796,127.37444]]],"infra":"기본계획상 별도 지정 없음 (특별정비계획 단계에서 결정)"},{"id":8,"dong":"둔산2동","type":"주택단지 정비형","single":false,"cx":["은초롱","꿈나무","샘머리1단지","샘머리2단지","둥지"],"units":5440,"area":291986,"site":215442,"far":240,"baseFar":363,"status":"applied","lat":36.360832,"lng":127.392562,"notes":["둔산 최대 구역. 2026.3 주민 동의율 90% 돌파.","1차 공모 신청, 미선정. 차기 공모 대응 중으로 보도."],"src":["jd0715","aru0331","plan2025"],"pts":[{"name":"은초롱","units":120,"osm":"way/487311241","lat":36.360086,"lng":127.39392},{"name":"꿈나무","units":540,"osm":"way/39517791","lat":36.360326,"lng":127.391797},{"name":"샘머리1단지","units":1350,"osm":"way/39517790","lat":36.363557,"lng":127.391776},{"name":"샘머리2단지","units":2200,"osm":"way/39517792","lat":36.361398,"lng":127.393298},{"name":"둥지","units":1230,"osm":"way/38412645","lat":36.358793,"lng":127.392019}],"rings":[[[36.359878,127.393315],[36.359882,127.394587],[36.360312,127.394585],[36.360308,127.393414],[36.360308,127.393313],[36.359878,127.393315]],[[36.360755,127.390549],[36.360745,127.393011],[36.359893,127.39302],[36.359892,127.390549],[36.360755,127.390549]],[[36.364613,127.390548],[36.362381,127.39056],[36.36235,127.392375],[36.362465,127.392734],[36.363068,127.392719],[36.363662,127.392729],[36.364035,127.393682],[36.364305,127.393407],[36.364525,127.393035],[36.364629,127.39238],[36.364613,127.390548]],[[36.360755,127.390549],[36.362079,127.390556],[36.36207,127.39174],[36.362082,127.392592],[36.362824,127.394308],[36.362061,127.394926],[36.361428,127.395619],[36.361069,127.396053],[36.360306,127.395108],[36.360312,127.394585],[36.360308,127.393414],[36.360696,127.393409],[36.360745,127.393011],[36.360755,127.390549]],[[36.357935,127.390551],[36.357981,127.390503],[36.359608,127.390506],[36.359651,127.390551],[36.359654,127.391601],[36.359657,127.392418],[36.359649,127.393524],[36.357935,127.393541],[36.357935,127.390551]]],"infra":"공원 (샘머리2 내 약 10,880㎡, 국공유지 재정비 포함)"},{"id":9,"dong":"둔산2동","type":"주택단지 정비형","single":true,"cx":["수정타운"],"units":2010,"area":97286,"site":80788,"far":230,"baseFar":363,"status":"applied","lat":36.359139,"lng":127.397272,"notes":["단일 단지 구역. 1차 공모 신청, 미선정."],"src":["jd0715","gm0406","plan2025"],"pts":[{"name":"수정타운","units":2010,"osm":"way/38412637","lat":36.359139,"lng":127.397272}],"rings":[[[36.359744,127.395476],[36.360913,127.396399],[36.360323,127.397551],[36.359851,127.398381],[36.359409,127.399043],[36.358955,127.399488],[36.358708,127.399638],[36.358597,127.39952],[36.3584,127.399481],[36.358174,127.399292],[36.358011,127.399024],[36.358017,127.395498],[36.359744,127.395476]]],"infra":"공원 (수정타운 내 약 4,020㎡, 학교변)"},{"id":10,"dong":"둔산1동","type":"주택단지 정비형","single":false,"cx":["햇님","한마루럭키","한마루삼성"],"units":2060,"area":177530,"site":103477,"far":228,"baseFar":363,"status":"none","lat":36.355236,"lng":127.39238,"notes":["1차 공모 미신청. 한마루는 럭키·삼성 2개 단지가 한 주택단지로 관리됨(2(3)단지)."],"src":["aru0331","plan2025"],"pts":[{"name":"햇님","units":660,"osm":"way/38412640","lat":36.356356,"lng":127.392947},{"name":"한마루럭키","units":700,"osm":"way/487341917","lat":36.354662,"lng":127.392911},{"name":"한마루삼성","units":700,"osm":"way/487341916","lat":36.35469,"lng":127.391283}],"rings":[[[36.35679,127.395033],[36.355915,127.395019],[36.355919,127.390873],[36.3568,127.390873],[36.35679,127.395033]],[[36.3557,127.392074],[36.355699,127.393456],[36.355485,127.393455],[36.355485,127.393736],[36.355206,127.393737],[36.354657,127.39374],[36.354143,127.393743],[36.353864,127.393744],[36.353664,127.393745],[36.353664,127.392021],[36.353973,127.392054],[36.354032,127.392109],[36.355379,127.392111],[36.355481,127.392082],[36.3557,127.392074]],[[36.3557,127.390602],[36.355645,127.390465],[36.35368,127.390478],[36.353664,127.392021],[36.353973,127.392054],[36.354032,127.392109],[36.355379,127.392111],[36.355481,127.392082],[36.3557,127.392074],[36.3557,127.390602]]],"infra":"도로·공원 (국공유지 재정비 포함)"},{"id":11,"dong":"둔산3동","type":"주택단지 정비형","single":false,"cx":["국화동성","국화신동아","국화우성","국화라이프","국화한신","청솔","가람"],"units":5150,"area":338307,"site":279713,"far":228,"baseFar":363,"status":"applied","lat":36.354099,"lng":127.397818,"notes":["7개 단지 통합, 둔산 2위 규모. 통합재건축 시 약 8,000세대 계획.","1차 공모 신청, 미선정."],"src":["jd0715","aru0109","plan2025"],"pts":[{"name":"국화동성","units":672,"osm":"relation/9702040","lat":36.354592,"lng":127.399627},{"name":"국화신동아","units":666,"osm":"way/487368784","lat":36.354961,"lng":127.396493},{"name":"국화우성","units":562,"osm":"way/487371350","lat":36.353425,"lng":127.396472},{"name":"국화라이프","units":560,"osm":"way/487381386","lat":36.354589,"lng":127.398258},{"name":"국화한신","units":450,"osm":"way/487373256","lat":36.352046,"lng":127.396869},{"name":"청솔","units":980,"osm":"relation/9702038","lat":36.352451,"lng":127.398674},{"name":"가람","units":1260,"osm":"way/38412635","lat":36.35663,"lng":127.398335}],"rings":[[[36.355674,127.400269],[36.353531,127.40031],[36.353529,127.400206],[36.353528,127.400155],[36.353528,127.400118],[36.353526,127.399796],[36.353523,127.399373],[36.353521,127.398956],[36.353594,127.398937],[36.35567,127.398962],[36.355671,127.399374],[36.355674,127.400269]],[[36.355586,127.395431],[36.35567,127.395523],[36.355675,127.397457],[36.355675,127.397561],[36.354253,127.397579],[36.354266,127.395428],[36.355231,127.39543],[36.355586,127.395431]],[[36.354266,127.395428],[36.354253,127.397579],[36.354004,127.397584],[36.354005,127.397526],[36.353512,127.397538],[36.352596,127.397547],[36.352596,127.395415],[36.352683,127.395416],[36.352822,127.395417],[36.353496,127.395422],[36.353979,127.395426],[36.354266,127.395428]],[[36.355675,127.397561],[36.355675,127.397937],[36.355673,127.398843],[36.355673,127.398909],[36.353521,127.398956],[36.35352,127.398938],[36.353512,127.397538],[36.354005,127.397526],[36.354004,127.397584],[36.354253,127.397579],[36.355675,127.397561]],[[36.352596,127.395415],[36.35245,127.395418],[36.35242,127.39547],[36.352423,127.396374],[36.351413,127.396383],[36.351379,127.396425],[36.351379,127.397559],[36.351637,127.397556],[36.352089,127.397552],[36.352372,127.397549],[36.352596,127.397547],[36.352596,127.395415]],[[36.353512,127.397538],[36.35352,127.398938],[36.353521,127.398956],[36.353523,127.399373],[36.353526,127.399796],[36.353389,127.399797],[36.351393,127.399816],[36.351392,127.399641],[36.351388,127.399019],[36.351379,127.397559],[36.351424,127.397558],[36.351637,127.397556],[36.352089,127.397552],[36.352372,127.397549],[36.352596,127.397547],[36.353512,127.397538]],[[36.355966,127.401505],[36.356,127.395501],[36.357331,127.39548],[36.357325,127.399984],[36.357134,127.40057],[36.356877,127.401173],[36.356562,127.401381],[36.355966,127.401505]]],"infra":"도로·공원 (가람 북측 약 14,000㎡, 공원축 연결)"},{"id":12,"dong":"둔산3동","type":"시설 정비형","single":false,"cx":["보라1단지","보라2단지"],"units":1500,"area":35430,"site":32112,"far":166,"baseFar":363,"status":"excluded","lat":36.352365,"lng":127.400572,"notes":["1차 선도지구 공모 대상에서 제외(4구역과 함께). 보라1·2단지는 임대·분양 혼합 구역으로, 시 FAQ에 따르면 임대 혼합 구역은 이번 공모에서만 제외되고 다음 해부터 추진 가능.","기본계획상 시설 정비형: 11구역과 도로로 구획되지 않아 원칙상 통합 대상이나, 자족시설(벤처집적·문화·교육연구, 둔산3동 행정복지센터 복합) 확보를 위해 분리. 종전용적률 166%."],"src":["aru0331","plan2025","faq2026"],"pts":[{"name":"보라1단지","units":null,"osm":"relation/9702039","lat":36.35286,"lng":127.400583},{"name":"보라2단지","units":null,"osm":"way/487374277","lat":36.351869,"lng":127.400562}],"rings":[[[36.352589,127.401389],[36.352331,127.401368],[36.352348,127.399807],[36.353389,127.399797],[36.353389,127.400237],[36.353389,127.400277],[36.353388,127.400324],[36.353384,127.400723],[36.353381,127.400953],[36.353374,127.401519],[36.352589,127.401389]],[[36.352348,127.399807],[36.352331,127.401368],[36.351456,127.40134],[36.351413,127.401295],[36.351407,127.400891],[36.351403,127.40062],[36.351393,127.399816],[36.352348,127.399807]]],"infra":"도로·자족시설 (부지 4,200㎡, 연면적 약 22,000㎡)"},{"id":13,"dong":"둔산1동","type":"주택단지 정비형","single":false,"cx":["크로바","목련"],"units":2798,"area":199744,"site":160090,"far":226,"baseFar":363,"status":"selected","lat":36.351292,"lng":127.392361,"notes":["1차 선도지구(2026.7.15). 13·14구역 평균 동의율 96.2%.","추진위 목표: 2026년 말 추진위 설립 → 2027년 말 조합 설립 → 3~4년 내 이주. 현 평형 유지 시 4,200~4,300세대 공급 구상.","대전시: 연내 특별정비구역 지정·고시 목표."],"src":["hh0715","hk0715","tjb0715","plan2025"],"pts":[{"name":"크로바","units":1632,"osm":"way/38412638","lat":36.35243,"lng":127.392738},{"name":"목련","units":1166,"osm":"way/38412642","lat":36.350153,"lng":127.391985}],"rings":[[[36.353445,127.395056],[36.351458,127.395041],[36.351411,127.394982],[36.351425,127.390485],[36.351464,127.390428],[36.353399,127.39042],[36.353439,127.39045],[36.353445,127.395056]],[[36.351136,127.390416],[36.351156,127.390441],[36.351158,127.393519],[36.351135,127.393556],[36.349189,127.393549],[36.349141,127.393455],[36.349163,127.393318],[36.349167,127.39285],[36.349138,127.392738],[36.349147,127.390477],[36.349207,127.390409],[36.351136,127.390416]]],"infra":"공원 (크로바 내 약 5,596㎡)"},{"id":14,"dong":"둔산1동","type":"주택단지 정비형","single":false,"cx":["한가람","공작한양"],"units":2454,"area":92627,"site":92627,"far":220,"baseFar":363,"status":"selected","lat":36.347896,"lng":127.392629,"notes":["1차 선도지구(2026.7.15). 국토부 발표 2,454세대(일부 보도 2,452).","추진위 목표: 연내 특별정비구역 지정, 2027년 3분기 조합설립."],"src":["hh0715","sed0810","plan2025"],"pts":[{"name":"한가람","units":1380,"osm":"way/38412644","lat":36.347855,"lng":127.391493},{"name":"공작한양","units":1074,"osm":"way/38412643","lat":36.347937,"lng":127.393765}],"rings":[[[36.346866,127.392625],[36.346873,127.390451],[36.346936,127.390365],[36.348815,127.390391],[36.348861,127.390427],[36.348863,127.391661],[36.34882,127.391944],[36.348819,127.392631],[36.346866,127.392625]],[[36.346866,127.392625],[36.348819,127.392631],[36.348823,127.393821],[36.348858,127.393884],[36.348853,127.394988],[36.348802,127.39504],[36.347348,127.395033],[36.347351,127.394561],[36.347196,127.394558],[36.347205,127.393819],[36.346846,127.393813],[36.346866,127.392625]]],"infra":"기본계획상 별도 지정 없음 (특별정비계획 단계에서 결정)"},{"id":15,"dong":"둔산2동","type":"주택단지 정비형","single":true,"cx":["경성큰마을"],"units":2910,"area":148534,"site":112492,"far":230,"baseFar":363,"status":"applied","lat":36.344785,"lng":127.376804,"notes":["단일 단지 구역. 1차 공모 신청, 미선정."],"src":["jd0715","plan2025"],"pts":[{"name":"경성큰마을","units":2910,"osm":"way/503899120","lat":36.344785,"lng":127.376804}],"rings":[[[36.342634,127.378502],[36.343119,127.378816],[36.343773,127.37909],[36.3477,127.376258],[36.346902,127.37563],[36.346336,127.375294],[36.345788,127.375167],[36.344771,127.375122],[36.344123,127.375047],[36.343629,127.374922],[36.342634,127.378502]]],"infra":"공원 (큰마을 내 약 5,820㎡)"},{"id":16,"dong":"둔산동","type":"주택단지 정비형","single":false,"cx":["녹원","은하수"],"units":2016,"area":118088,"site":94829,"far":193,"baseFar":288,"status":"none","lat":36.348617,"lng":127.380114,"notes":["1차 공모 미신청. 제2종일반주거지역으로 기준용적률 288%(다른 구역 363%)."],"src":["aru0331","plan2025"],"pts":[{"name":"녹원","units":1200,"osm":"way/1238328029","lat":36.347703,"lng":127.380666},{"name":"은하수","units":816,"osm":"way/1267707888","lat":36.349531,"lng":127.379562}],"rings":[[[36.348063,127.378918],[36.348111,127.378923],[36.348194,127.379089],[36.348208,127.379187],[36.348458,127.379695],[36.34851,127.379742],[36.348908,127.380556],[36.348938,127.380977],[36.348937,127.381864],[36.348906,127.381919],[36.347184,127.381924],[36.347126,127.38191],[36.347043,127.381848],[36.346077,127.380454],[36.346086,127.38039],[36.348063,127.378918]],[[36.34831,127.378827],[36.348332,127.378728],[36.34904,127.378235],[36.350486,127.379126],[36.350511,127.379192],[36.350513,127.380679],[36.350474,127.380716],[36.349142,127.380704],[36.349076,127.380394],[36.348954,127.380131],[36.34831,127.378827]]],"infra":"기본계획상 별도 지정 없음 (특별정비계획 단계에서 결정)"},{"id":17,"dong":"탄방동","type":"시설 정비형","single":false,"cx":["한우리","산호","개나리"],"units":1618,"area":85040,"site":79450,"far":183,"baseFar":375,"status":"applied","lat":36.344921,"lng":127.386009,"notes":["1차 공모 신청, 미선정. 신청 구역 중 최소 규모.","기본계획상 시설 정비형(결합개발): 탄방역에서 떨어져 있어 별도 기준용적률 375% 적용, 자족시설(생활복리·업무·교육연구)과 공영주차장 계획."],"src":["jd0715","plan2025"],"pts":[{"name":"한우리","units":598,"osm":"way/487390820","lat":36.345027,"lng":127.388367},{"name":"산호","units":654,"osm":"way/487394567","lat":36.344741,"lng":127.386681},{"name":"개나리","units":366,"osm":"way/503891857","lat":36.344996,"lng":127.382979}],"rings":[[[36.34593,127.387648],[36.345879,127.38758],[36.343952,127.387568],[36.343964,127.388312],[36.344636,127.389278],[36.345895,127.389291],[36.34594,127.389236],[36.34593,127.387648]],[[36.345915,127.386124],[36.345918,127.387053],[36.345302,127.38707],[36.345299,127.387353],[36.343701,127.38735],[36.34366,127.387254],[36.343651,127.386537],[36.343778,127.386076],[36.345891,127.38608],[36.345915,127.386124]],[[36.344819,127.381784],[36.344608,127.382135],[36.344431,127.382589],[36.34428,127.38319],[36.344224,127.383624],[36.345909,127.383626],[36.345906,127.383312],[36.344819,127.381784]]],"infra":"공원·자족시설 (개나리 내 공원 약 4,000㎡, 자족시설 부지 13,936㎡)"}],"geo":"OpenStreetMap (Overpass API) 단지 경계 폴리곤, 2026-10-20 조회","plan":"2035 대전 노후계획도시정비 기본계획(안) 둔산지구 주민공람본, 2025.11 (표4-48·4-53)","faq":"대전광역시 노후계획도시정비 FAQ, 2026.1"}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+const SRC = {
+  hh0715:{t:'하우징헤럴드 2026.7.15',u:'https://www.housingherald.co.kr/news/articleView.html?idxno=62339'},
+  hk0715:{t:'한국경제 2026.7.15',u:'https://www.hankyung.com/article/2026071574661'},
+  jd0715:{t:'중도일보 2026.7.15',u:'https://www.joongdo.co.kr/web/view.php?key=20260715010004629'},
+  gm0406:{t:'굿모닝충청 2026.4.6',u:'https://www.goodmorningcc.com/news/articleView.html?idxno=444170'},
+  aru0331:{t:'위클리한국주택경제 2026.3',u:'https://www.arunews.com/news/articleView.html?idxno=61181'},
+  aru0109:{t:'위클리한국주택경제 2026.1',u:'http://www.arunews.com/news/articleView.html?idxno=52360'},
+  hk0810:{t:'한국경제 2026.8.10',u:'https://www.hankyung.com/article/202608104431i'},
+  nfz:{t:'뉴스프리존 2026.8',u:'https://www.newsfreezone.co.kr/news/articleView.html?idxno=706592'},
+  jd0917:{t:'중도일보 2026.9.17',u:'https://www.joongdo.co.kr/web/view.php?key=20260917010005969'},
+  tjb0715:{t:'TJB 2026.7.15',u:'https://www.tjb.co.kr/news05/bodo/view/id/101027/version/1'},
+  nate0715:{t:'연합뉴스 2026.7.15',u:'https://m.news.nate.com/view/20260715n26621'},
+  sj0406:{t:'세종포스트 2026.4.6',u:'http://www.sjpost.co.kr/news/articleView.html?idxno=73983'},
+  namu:{t:'나무위키(2차 자료)',u:'https://namu.wiki/w/%EB%91%94%EC%82%B0%EC%A3%BC%EA%B3%B5%EC%95%84%ED%8C%8C%ED%8A%B8'},
+  sed0810:{t:'서울경제 2026.8',u:'https://www.sedaily.com/article/20077832'},
+  plan2025:{t:'2035 기본계획(안) 공람본 2025.11',u:'https://www.daejeon.go.kr/'},
+  faq2026:{t:'대전시 노후계획도시정비 FAQ 2026.1',u:'https://www.daejeon.go.kr/'}
+};
+const DATA = JSON.parse(document.getElementById('zone-data').textContent);
+const ZONES = DATA.zones; const TOTAL = DATA.total;
+const UNK_TOTAL = TOTAL - ZONES.filter(z=>z.units).reduce((a,z)=>a+z.units,0);
+const STATUS = {
+  selected:{l:'선도지구 선정', c:'selected'},
+  applied:{l:'2차 공모 준비', c:'applied'},
+  none:{l:'순차 추진 예정', c:'none'},
+  excluded:{l:'1차 공모 제외', c:'excluded'}
+};
+const fmt = n => n==null ? '—' : n.toLocaleString('ko-KR');
+const byId = id => ZONES.find(z=>z.id===id);
+
+/* ---------- 지도 ---------- */
+const radius = u => Math.round(Math.max(14, Math.sqrt(u)*0.34));
+function label(z){ const n=z.cx[0].replace(/\d단지$/,''); return z.cx.length>1 ? `${n} 외 ${z.cx.length-1}` : n; }
+let map = null; const polys={};
+if (!window.L) {
+  document.getElementById('leafmap').innerHTML='<p style="padding:24px;color:var(--muted);font-size:.9rem">지도 라이브러리를 불러오지 못했습니다. 네트워크 연결이나 차단 프로그램을 확인한 뒤 새로고침하세요. 구역 정보는 아래 표와 오른쪽 패널에서 볼 수 있습니다.</p>';
+} else {
+const dark = matchMedia('(prefers-color-scheme: dark)');
+const mapEl=document.getElementById('leafmap');
+map = L.map('leafmap',{scrollWheelZoom:false, zoomControl:false}).setView([36.3565,127.3860],14);
+L.control.zoom({position:'topright'}).addTo(map);
+/* 배경 타일: 모두 API 키 불필요. OSM 표준(한글 라벨) → 실패 시 OSM HOT → Esri 위성 순으로 대체 */
+const OSM_ATTR='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const ESRI=()=>L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles &copy; Esri, Maxar, Earthstar Geographics'});
+const BASES={
+  map:{label:'지도',chain:[
+    {light:true, make:()=>L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:OSM_ATTR})},
+    {light:true, make:()=>L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',{maxZoom:19,subdomains:'abc',attribution:OSM_ATTR+' · HOT'})},
+    {light:false,make:ESRI}
+  ]},
+  sat:{label:'위성',chain:[{light:false,make:ESRI}]}
+};
+let baseKey='map', baseLayer=null, chainIdx=0, mountSeq=0;
+/* 타일 한 장을 실제로 받아 픽셀을 검사한다. 차단 서버는 403을 "Access blocked" 그림으로 보내 onerror가 나지 않으므로,
+   어두운 플레이스홀더(평균 밝기 < 90)를 차단으로 간주한다. CORS로 캔버스를 못 읽으면 통과시킨다. */
+function probeTile(layer,light){
+  return new Promise(res=>{
+    const c=map.getCenter(), p=map.project(c,15).divideBy(256).floor();
+    const url=L.Util.template(layer._url,{s:'a',z:15,x:p.x,y:p.y,r:''});
+    const im=new Image(); im.crossOrigin='anonymous';
+    const t=setTimeout(()=>res('timeout'),9000);
+    im.onerror=()=>{clearTimeout(t);res('error');};
+    im.onload=()=>{clearTimeout(t);
+      if(!light) return res('ok');                       // 위성영상은 어두울 수 있어 픽셀 검사 생략
+      try{const N=64,cv=document.createElement('canvas');cv.width=cv.height=N;const g=cv.getContext('2d');g.drawImage(im,0,0,N,N);
+        const d=g.getImageData(0,0,N,N).data;let darkPx=0;for(let i=0;i<d.length;i+=4)if(d[i]+d[i+1]+d[i+2]<240)darkPx++;
+        res(darkPx/(N*N)>0.4?'blocked':'ok');}         // 차단 안내 타일: 어두운 픽셀 ~78%, 실제 지도: ~0~10%
+      catch(e){res('ok');}};
+    im.src=url;
+  });
+}
+async function mountBase(key,startIdx){
+  const seq=++mountSeq; const b=BASES[key];
+  document.querySelectorAll('.basebtn').forEach(x=>x.classList.toggle('is-on',x.dataset.b===key));
+  let idx=startIdx, layer=null, verdict='blocked';
+  for(;idx<b.chain.length;idx++){
+    layer=b.chain[idx].make(); verdict=await probeTile(layer,b.chain[idx].light);
+    if(seq!==mountSeq) return;               // 그 사이 다른 배경을 골랐으면 중단
+    if(verdict==='ok'||verdict==='timeout') break;
+  }
+  if(idx>=b.chain.length){idx=b.chain.length-1; layer=b.chain[idx].make();}
+  if(baseLayer) map.removeLayer(baseLayer);
+  baseKey=key; chainIdx=idx; baseLayer=layer;
+  mapEl.classList.toggle('tiles-failed', verdict==='blocked'||verdict==='error');
+  let errs=0, oks=0;
+  baseLayer.on('tileload',()=>{oks++;});
+  baseLayer.on('tileerror',()=>{errs++; if(oks<2&&errs>=6){ if(idx+1<b.chain.length) mountBase(key,idx+1); else mapEl.classList.add('tiles-failed'); }});
+  baseLayer.addTo(map);
+  mapEl.classList.toggle('tiles-dark', dark.matches && b.chain[idx].light);
+}
+mountBase('map',0);
+dark.addEventListener('change',()=>mapEl.classList.toggle('tiles-dark', dark.matches && BASES[baseKey].chain[chainIdx].light));
+document.querySelectorAll('.basebtn').forEach(x=>x.addEventListener('click',()=>{if(x.dataset.b!==baseKey) mountBase(x.dataset.b,0);}));
+map.on('moveend',()=>{ if(mapEl.classList.contains('tiles-failed')) {/* 사용자가 움직이면 재시도 */ mountBase(baseKey,0);} });
+const zoomCls=()=>mapEl.classList.toggle('leafmap-z14',map.getZoom()<15); map.on('zoomend',zoomCls); zoomCls();
+if(window.ResizeObserver) new ResizeObserver(()=>map.invalidateSize()).observe(mapEl);   // 미리보기·탭 전환 등으로 크기가 뒤늦게 잡힐 때 보정
+map.on('click',()=>map.scrollWheelZoom.enable());
+map.on('mouseout',()=>map.scrollWheelZoom.disable());
+
+const COLOR={selected:'#167a54',applied:'#bf7a0f',none:'#8a94a1',excluded:'#6e7887',unknown:'#9aa3ae'};
+ZONES.filter(z=>z.rings).forEach(z=>{
+  const g=L.featureGroup(z.rings.map((ring,i)=>L.polygon(ring,{color:COLOR[z.status],weight:1.5,fillColor:COLOR[z.status],fillOpacity:z.status==='excluded'?.18:.28,dashArray:z.status==='excluded'?'4 3':null})
+    .bindTooltip(`<b>${z.pts[i].name}</b>${z.pts[i].units?` · <span class="num">${fmt(z.pts[i].units)}</span>세대`:''}<br>통합 ${z.id}구역 · ${STATUS[z.status].l}`,{className:'zt',direction:'top',sticky:true})
+    .on('click',()=>setActive(z.id)))).addTo(map);
+  polys[z.id]=g;
+});
+ZONES.filter(z=>z.lat!=null).forEach(z=>{
+  const r=radius(z.units), d=r*2;
+  const icon=L.divIcon({className:'', iconSize:[d,d], iconAnchor:[r,r],
+    html:`<div class="zmark ${z.status}" data-id="${z.id}" style="width:${d}px;height:${d}px" role="button" tabindex="0" aria-label="통합${z.id}구역 ${z.cx.join('·')} ${fmt(z.units)}세대">${z.id}<span class="zl">${label(z)}</span></div>`});
+  const m=L.marker([z.lat,z.lng],{icon, keyboard:false, zIndexOffset: 1000-r}).addTo(map);
+  if(z.units<2500) setTimeout(()=>{const el=document.querySelector(`.zmark[data-id="${z.id}"]`); if(el) el.classList.add('sm');},0);
+  m.bindTooltip(`<b>통합 ${z.id}구역</b> · ${STATUS[z.status].l}<br>${z.cx.join(' · ')}<br><span class="num">${fmt(z.units)}</span>세대`,{className:'zt',direction:'top',offset:[0,-r-4]});
+  m.on('click',()=>setActive(z.id));
+  m.on('keypress',e=>{if(e.originalEvent.key==='Enter')setActive(z.id);});
+  // 단지별 점(지오코딩 후 pts가 있을 때)
+});
+}
+
+/* ---------- 패널 ---------- */
+const panel=document.getElementById('panel');
+const Y=(t,w,cls)=>`<li class="${cls||''}"><span class="mk"></span><div>${t}<span class="when">${w}</span></div></li>`;
+function stepsFor(z){
+  if(z.status==='selected') return [
+    Y('선도지구 선정','2026.7.15','done'), Y('기본계획 고시','2026.8 말','done'),
+    Y('토지등소유자 과반 동의 → 선도지구 지정·특별정비구역 지정 신청 (특별정비계획 포함)','진행 중 · 주민대표단 구성','now'),
+    Y('특별정비구역 지정·고시','대전시 목표 2026년 말'),
+    Y('조합 설립','13구역 목표 2027년 말 · 14구역 목표 2027년 3분기'),
+    Y('사업시행계획 · 관리처분계획 인가','미정'),
+    Y('이주 · 철거 · 착공','13구역 추진위 목표 2029~2030')].join('');
+  if(z.status==='applied') return [
+    Y('1차 공모 신청','2026.3.30~4.3','done'), Y('1차 선정 결과: 미선정','2026.7.15','done'),
+    Y('2차 공모 준비 (동의율 유지·주민대표단 구성)','진행 중','now'),
+    Y('2차 선도지구 선정','2027 예정 · 둔산 약 4,000세대 · 1~2개 구역 전망'),
+    Y('선정 시: 특별정비계획 → 특별정비구역 지정 → 조합 → 이주','선정 후 3~4년 이상(선도지구 사례 기준)')].join('');
+  if(z.status==='excluded') return [
+    Y('특별정비예정구역 설정','기본계획','done'), Y('1차 선도지구 공모 대상 제외','2026.3','done'),
+    Y('향후 정비 방식·시기','대전시 자료 확인 필요','now')].join('');
+  if(z.status==='none') return [
+    Y('특별정비예정구역 설정','기본계획','done'), Y('1차 공모 미신청','2026.4','done'),
+    Y('연차별 정비예정물량에 따라 순차 추진','2027~2035','now')].join('');
+  return '';
+}
+function renderPanel(z){
+  if(!z){
+    panel.innerHTML=`<div class="eyebrow">구역 상세</div><p class="empty">지도의 구역을 누르거나 단지 이름을 검색하세요.</p>
+    <div class="quick">${ZONES.filter(z=>z.lat!=null).map(z=>`<button data-id="${z.id}">${z.id}구역 ${label(z)}</button>`).join('')}</div>`;
+    panel.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>setActive(Number(b.dataset.id))));
+    return;
+  }
+  const s=STATUS[z.status];
+  panel.innerHTML=`
+    <div class="eyebrow">구역 상세</div>
+    <div style="margin-top:8px"><span class="pill ${s.c}">${s.l}</span></div>
+    <h3>통합 ${z.id}구역</h3>
+    <p class="cx">${z.pts.map(p=>p.units?`${p.name} <span class="num dim">${fmt(p.units)}</span>`:p.name).join(' · ')} · ${z.dong}</p>
+    <dl class="kv">
+      <dt>유형</dt><dd>${z.type}${z.single?' · 단일 단지':''}</dd>
+      <dt>기존 세대</dt><dd class="num">${fmt(z.units)} 세대 <span class="dim">(지구의 ${(z.units/TOTAL*100).toFixed(1)}%)</span></dd>
+      <dt>예정구역 면적</dt><dd class="num">${fmt(z.area)} ㎡ <span class="dim">(주택부지 ${fmt(z.site)})</span></dd>
+      <dt>용적률</dt><dd class="num">${z.far}% → 기준 ${z.baseFar}%</dd>
+      <dt>기반시설 계획</dt><dd>${z.infra}</dd>
+      <dt>이주 시점</dt><dd>${z.status==='selected'?'빠르면 2029~2030 (추진위 목표, 미확정)':z.status==='applied'?'2차 선정 여부에 따라 2030년대 초반 이후':z.status==='none'?'2027~2035 연차별 선정 순서에 따라 결정':'미정 (정비 방식 확인 필요)'}</dd>
+    </dl>
+    <div class="eyebrow" style="margin-top:16px">다음 단계</div>
+    <ol class="steps">${stepsFor(z)}</ol>
+    <ul class="notes">${z.notes.map(n=>`<li>${n}</li>`).join('')}</ul>
+    <div class="srcs"><span>출처</span>${z.src.map(k=>`<a href="${SRC[k].u}" target="_blank" rel="noopener">${SRC[k].t}</a>`).join('')}</div>`;
+}
+
+/* ---------- 상호작용 ---------- */
+let filter='all';
+function setActive(id, fly){
+  document.querySelectorAll('.zmark').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.id)===id));
+  Object.entries(polys).forEach(([k,g])=>g.setStyle({weight:Number(k)===id?3:1.5}));
+  const z=byId(id); renderPanel(z);
+  if(map&&z&&fly){ if(polys[id]) map.flyToBounds(polys[id].getBounds().pad(.6),{duration:.6,maxZoom:16}); else if(z.lat!=null) map.flyTo([z.lat,z.lng],15,{duration:.6}); }
+  if(matchMedia('(max-width:860px)').matches) panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function applyFilter(){
+  document.querySelectorAll('.zmark').forEach(el=>{const z=byId(Number(el.dataset.id));el.classList.toggle('is-dim',filter!=='all'&&z.status!==filter);});
+  Object.entries(polys).forEach(([id,g])=>{const z=byId(Number(id));const dim=filter!=='all'&&z.status!==filter;g.setStyle({fillOpacity:dim?.06:(z.status==='excluded'?.18:.28),opacity:dim?.25:1});});
+}
+document.getElementById('chips').addEventListener('click',e=>{
+  const b=e.target.closest('.chip'); if(!b) return;
+  filter=b.dataset.f; document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('is-on',c===b)); applyFilter();
+});
+// 검색
+const dl=document.getElementById('aptlist'), index=[];
+ZONES.forEach(z=>(z.cx||[]).forEach(c=>{index.push({n:c,id:z.id});const o=document.createElement('option');o.value=c;dl.appendChild(o);}));
+const q=document.getElementById('q'), qres=document.getElementById('qres');
+function search(){
+  const v=q.value.trim(); if(!v){qres.classList.remove('show');return;}
+  const hit=index.find(i=>i.n===v)||index.find(i=>i.n.startsWith(v))||index.find(i=>i.n.includes(v));
+  if(hit){const z=byId(hit.id);qres.innerHTML=`<span class="pill ${STATUS[z.status].c}">${STATUS[z.status].l}</span><b>${hit.n}</b> → 통합 ${z.id}구역 · <span class="num">${fmt(z.units)}</span>세대 <a href="#map">지도에서 보기</a>`;qres.classList.add('show');setActive(z.id,true);}
+  else{qres.innerHTML=`<span class="dim">"${v}"은(는) 둔산지구 특별정비예정구역 48개 단지에 없습니다. 노은·송촌 등 다른 지구이거나 지구 밖 단지일 수 있습니다.</span>`;qres.classList.add('show');}
+}
+q.addEventListener('change',search); q.addEventListener('keydown',e=>{if(e.key==='Enter')search();});
+renderPanel(null);
+
+/* ---------- 타임라인 ---------- */
+const TL_ALL=[
+  ['2024.4','노후계획도시 특별법 시행','통합 정비 시 안전진단 면제, 용적률 특례의 법적 근거.','done'],
+  ['2025.11','선도지구 공모 공고','둔산 5,000세대(최대 7,500) · 송촌 2,000세대(최대 3,000).','done'],
+  ['2025.12.2~19','2035 기본계획(안) 주민공람','17개 특별정비예정구역 설정, 기준용적률 226→360%.','done'],
+  ['2026.3.30~4.3','선도지구 공모 접수','둔산 9개 구역 28,335세대 신청. 평균 동의율 89%.','done'],
+  ['2026.6','기본계획 국토부 승인 신청','시 도시계획위원회·시의회 의견청취 후 제출.','done'],
+  ['2026.7.15','1차 선도지구 선정','13구역(크로바·목련) · 14구역(한가람·공작한양) 5,252세대.','done'],
+  ['2026.7.24','시의회 5분 자유발언','10년 장기계획 홍보, 이주대책, 통학안전 대책 촉구.','done'],
+  ['2026.8.10','국토부 특별위 심의·의결','둔산 이주수요 48,721세대, 연 약 4,900세대 정비.','done'],
+  ['2026.8 말','기본계획 고시','2026~2035 마스터플랜 확정. 주민대표단 구성 가능.','done'],
+  ['2026.11.6~17','시의회 첫 행정사무감사','도시주택국 소관: 특별정비구역 지정 진행, 2027 물량, 이주대책.','now'],
+  ['2026년 말','선도지구 특별정비구역 지정·고시','대전시 목표.','plan'],
+  ['2027','2차 선도지구 선정','둔산 약 4,000세대 규모, 1~2개 구역 전망.','plan'],
+  ['2027~2035','연차별 순차 선정 · 전 구역 정비계획 수립 완료','27개 구역(둔산 17·송촌 10). 시 FAQ: 2035년까지 전체 구역 정비계획 수립 완료.','plan'],
+  ['~2040','단계별 이주계획에 따라 준공','시 FAQ 목표. 여건에 따라 달라질 수 있음.','plan']
+];
+const TL_SEL=[
+  ['2026.7.15','선도지구 선정','안전진단 면제·통합심의·용적률 특례 적용.','done'],
+  ['2026 하반기','주민대표단 구성 승인','소유주 과반 동의로 단일 창구 구성. 찾아가는 미래도시지원센터 운영.','now'],
+  ['~2026년 말','특별정비계획 수립 → 특별정비구역 지정·고시','시 목표. 공공기여·기반시설 계획 포함.','plan'],
+  ['2027','조합 설립','13구역 목표 2027년 말 · 14구역 목표 2027년 3분기.','plan'],
+  ['2028~','사업시행계획 · 관리처분계획 인가','통합심의로 기간 단축 기대.','plan'],
+  ['2029~2030','이주 · 철거 · 착공','13구역 추진위 목표 "3~4년 내 이주". 이주단지·순환주택·이주비 대책 필요.','plan'],
+  ['2030년대 초','준공 · 입주','13구역 현 평형 유지 시 4,200~4,300세대 공급 구상. 지구 전체 준공 목표는 2040.','plan']
+];
+const tl=rows=>rows.map(r=>`<li class="${r[3]}"><div class="when">${r[0]}</div><div class="what">${r[1]}${r[3]==='plan'?'<span class="tag">목표·예정</span>':''}</div>${r[2]?`<div class="how">${r[2]}</div>`:''}</li>`).join('');
+document.getElementById('tl-all').innerHTML=tl(TL_ALL);
+document.getElementById('tl-sel').innerHTML=tl(TL_SEL);
+
+/* ---------- 로드맵 ---------- */
+const DONE_2026=5252;
+function roadmap(pace){
+  const remain=TOTAL-DONE_2026;
+  const doneYear=2026+Math.ceil(remain/pace);          // 완료 연도(항상 계산됨)
+  const lastYear=Math.max(2035, Math.min(doneYear, 2050));
+  const years=[]; let cum=0;
+  for(let y=2026;y<=lastYear;y++){
+    const v=y===2026?DONE_2026:Math.max(0,Math.min(pace,TOTAL-cum));
+    cum+=v; years.push({y,v,cum,over:y>2035});
+  }
+  const n=years.length, bw=n>12?40:Math.min(64, 620/n);
+  const pad={l:56,r:24,t:22,b:34}, cw=pad.l+pad.r+bw*n, ch=300;
+  const yMax=TOTAL*1.08, sy=v=>pad.t+(ch-pad.t-pad.b)*(1-v/yMax), x0=i=>pad.l+i*bw;
+  let s='';
+  [0,10000,20000,30000,40000].forEach(v=>{s+=`<line class="grid" x1="${pad.l}" x2="${cw-pad.r}" y1="${sy(v)}" y2="${sy(v)}"/><text class="ax" x="${pad.l-8}" y="${sy(v)+4}" text-anchor="end">${v?(v/1000)+'k':'0'}</text>`;});
+  years.forEach((d,i)=>{const w=bw*0.62, x=x0(i)+(bw-w)/2;
+    s+=`<rect class="${d.y===2026?'bar-done':d.over?'bar-over':'bar-plan'}" x="${x}" y="${sy(d.v)}" width="${w}" height="${sy(0)-sy(d.v)}" rx="2"/>`;
+    s+=`<text class="ax" x="${x0(i)+bw/2}" y="${ch-pad.b+16}" text-anchor="middle">${n>14?String(d.y).slice(2):d.y}</text>`;});
+  s+=`<line class="goal" x1="${pad.l}" x2="${cw-pad.r}" y1="${sy(TOTAL)}" y2="${sy(TOTAL)}"/><text class="goallbl" x="${pad.l+4}" y="${sy(TOTAL)-5}">이주수요 48,721세대</text>`;
+  s+=`<polyline class="cum" points="${years.map((d,i)=>`${x0(i)+bw/2},${sy(d.cum)}`).join(' ')}"/>`;
+  years.forEach((d,i)=>{s+=`<circle class="cumdot" cx="${x0(i)+bw/2}" cy="${sy(d.cum)}" r="3"/>`;});
+  const i35=years.findIndex(d=>d.y===2035);
+  if(i35>=0&&i35<n-1){const x=x0(i35)+bw;s+=`<line x1="${x}" x2="${x}" y1="${pad.t}" y2="${sy(0)}" style="stroke:var(--muted);stroke-dasharray:3 4"/><text class="ax" x="${x-5}" y="${pad.t+9}" text-anchor="end">목표연도 2035</text>`;}
+  document.getElementById('chart').innerHTML=`<svg viewBox="0 0 ${cw} ${ch}" style="width:100%;min-width:${n>12?cw:0}px" role="img" aria-label="연간 선정 물량과 누적 세대수">${s}</svg>`;
+  const by35=years.find(d=>d.y===2035).cum, v=document.getElementById('verdict');
+  if(doneYear<=2035) v.innerHTML=`연 <b class="num">${fmt(pace)}</b>세대면 <span class="ok">${doneYear}년</span>에 전 구역 선정이 끝납니다. 기본계획 목표연도(2035) 안에 들어옵니다.`;
+  else v.innerHTML=`연 <b class="num">${fmt(pace)}</b>세대면 2035년까지 누적 <span class="num">${fmt(by35)}</span>세대. <span class="bad">${fmt(TOTAL-by35)}세대가 목표연도를 넘기고</span>, 전 구역 선정은 <span class="bad">${doneYear}년</span>에 끝납니다.`;
+}
+const pace=document.getElementById('pace'), paceOut=document.getElementById('paceOut');
+const draw=()=>{const p=Number(pace.value);paceOut.textContent=fmt(p)+'세대';document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('is-on',Number(b.dataset.v)===p));roadmap(p);};
+pace.addEventListener('input',draw);
+document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>{pace.value=b.dataset.v;draw();}));
+draw();
+
+/* ---------- 이주수요 스택 ---------- */
+document.getElementById('stack').innerHTML=[['s-sel',5252,'선도지구'],['s-app',23083,'2차 공모 준비'],['s-exc',5524,'1차 공모 제외'],['s-unk',UNK_TOTAL,'확인 중']]
+  .map(p=>`<div class="${p[0]}" style="flex:${p[1]}" title="${p[2]} ${fmt(p[1])}세대"></div>`).join('');
+
+/* ---------- 표 ---------- */
+const tb=document.querySelector('#dtable tbody');
+tb.innerHTML=ZONES.map(z=>`<tr>
+  <td class="num">통합 ${z.id}<div class="dim" style="font-size:.74rem;font-family:var(--font-sans)">${z.type.replace(' 정비형','')}</div></td>
+  <td>${z.pts.map(p=>p.units?`${p.name} <span class="num dim">${fmt(p.units)}</span>`:p.name).join(' · ')}<div class="dim" style="font-size:.78rem">${z.dong}</div></td>
+  <td class="r num">${fmt(z.units)}</td>
+  <td class="r num">${fmt(z.area)}</td>
+  <td class="r num">${z.far}→${z.baseFar}</td>
+  <td style="min-width:200px;white-space:normal">${z.infra.replace(' (','<span class="dim" style="font-size:.78rem"> (')+(z.infra.includes(' (')?'</span>':'')}</td>
+  <td><span class="pill ${STATUS[z.status].c}">${STATUS[z.status].l}</span></td>
+  <td>${z.src.map(k=>`<a href="${SRC[k].u}" target="_blank" rel="noopener">${SRC[k].t}</a>`).join(', ')}</td>
+</tr>`).join('')+`<tr><td colspan="2"><b>합계</b> <span class="dim">17구역 · 48개 단지</span></td><td class="r num"><b>${fmt(TOTAL)}</b></td><td class="r num"><b>2,647,064</b></td><td class="r num">226→360</td><td colspan="3" class="dim">연 약 4,900세대 × 10년 · <a href="${SRC.hk0810.u}" target="_blank" rel="noopener">${SRC.hk0810.t}</a></td></tr>`;
+})();
+</script>
+</body>
+</html>
