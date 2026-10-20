@@ -5,6 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>둔산 재건축 트래커</title>
 <meta name="description" content="둔산지구 노후계획도시 정비 17개 구역의 선도지구 선정 현황, 절차 단계, 10년 로드맵, 이주 규모를 한 곳에서 확인합니다.">
+<link rel="canonical" href="https://pillip.github.io/KSW_DUNSAN/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon-16.png" sizes="16x16" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#1e4fd0">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="둔산 재건축 트래커">
+<meta property="og:title" content="둔산 재건축 트래커 — 17개 구역, 지금 어느 단계인가">
+<meta property="og:description" content="둔산지구 노후계획도시 정비 17개 구역 48개 단지의 선도지구 선정 현황, 절차와 일정, 10년 로드맵. 내 단지를 검색해 보세요.">
+<meta property="og:url" content="https://pillip.github.io/KSW_DUNSAN/">
+<meta property="og:image" content="https://pillip.github.io/KSW_DUNSAN/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="둔산 재건축 트래커 — 17개 구역, 지금 어느 단계인가">
+<meta name="twitter:description" content="둔산지구 노후계획도시 정비 17개 구역 48개 단지의 선도지구 선정 현황, 절차와 일정, 10년 로드맵.">
+<meta name="twitter:image" content="https://pillip.github.io/KSW_DUNSAN/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -46,13 +66,12 @@ p{margin:0}
 .nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .nav .wrap{display:flex;align-items:center;gap:18px;height:56px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--fg);letter-spacing:-.01em;white-space:nowrap}
-.brand .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);position:relative;flex:none}
-.brand .mark::after{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--surface)}
+.brand .mark{width:26px;height:26px;border-radius:7px;flex:none;display:block}
 .nav ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;margin-left:auto}
 .nav li a{color:var(--muted);font-size:.9rem}
 .nav li a:hover{color:var(--fg);text-decoration:none}
 .nav .upd{font-size:.78rem;color:var(--muted);white-space:nowrap}
-@media (max-width:760px){.nav ul{display:none}}
+@media (max-width:760px){.nav .wrap{height:auto;flex-wrap:wrap;gap:6px 12px;padding-block:8px}.nav ul{width:100%;order:3;overflow-x:auto;gap:14px;margin-left:0;scrollbar-width:none}.nav ul::-webkit-scrollbar{display:none}.nav li a{white-space:nowrap}.nav .upd{margin-left:auto}}
 
 /* hero */
 .hero{padding-block:44px 28px}
@@ -80,12 +99,13 @@ section{padding-block:36px}
 /* map */
 .maprow{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:18px;align-items:start}
 @media (max-width:860px){.maprow{grid-template-columns:1fr}}
-.mapcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.mapcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0;position:relative}
 .mapwrap{position:relative}
 #leafmap{height:600px;width:100%;background:var(--surface-2)}
-@media (max-width:860px){#leafmap{height:440px}}
+@media (max-width:860px){#leafmap{height:min(70vh,560px)}}
 .map-ui{position:absolute;z-index:500;display:flex;flex-wrap:wrap;gap:6px}
 .map-ui.tl{top:12px;left:12px;right:110px}
+@media (max-width:860px){.map-ui.tl{position:static;flex-wrap:nowrap;overflow-x:auto;padding:10px 12px;border-bottom:1px solid var(--line);scrollbar-width:none}.map-ui.tl::-webkit-scrollbar{display:none}.map-ui.tl .chip{flex:none}.mapwrap .map-ui.tr{top:12px}.leaflet-top.leaflet-right{margin-top:76px}}
 .map-ui.tr{top:12px;right:12px;flex-direction:column;align-items:stretch;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .map-ui.tr .chip{border:0;border-radius:0;box-shadow:none;justify-content:center;padding:6px 12px}
 .map-ui.tr .chip+.chip{border-top:1px solid var(--line)}
@@ -145,6 +165,9 @@ section{padding-block:36px}
 .panel .empty{color:var(--muted);font-size:.9rem;margin-top:8px}
 .panel .quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .panel .quick button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:5px 10px;font:inherit;font-size:.82rem;cursor:pointer}
+.share{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:.82rem}
+.share button{border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:6px 12px;font:inherit;font-size:.82rem;cursor:pointer}
+.share span{color:var(--sel);font-weight:600}
 
 /* timeline */
 .tlgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px 40px}
@@ -237,7 +260,7 @@ footer .wrap{max-width:1160px}
 
 <nav class="nav" aria-label="주요 메뉴">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="mark" aria-hidden="true"></span>둔산 재건축 트래커</a>
+    <a class="brand" href="#top"><img class="mark" src="assets/logo.svg" width="26" height="26" alt="">둔산 재건축 트래커</a>
     <ul>
       <li><a href="#map">구역 현황</a></li>
       <li><a href="#timeline">절차·일정</a></li>
@@ -280,7 +303,6 @@ footer .wrap{max-width:1160px}
   </div>
   <div class="maprow">
     <div class="mapcard">
-      <div class="mapwrap">
       <div class="map-ui tl" id="chips" role="group" aria-label="단계 필터">
         <button class="chip is-on" data-f="all">전체</button>
         <button class="chip" data-f="selected"><span class="sw" style="background:var(--sel)"></span>선도지구</button>
@@ -288,6 +310,7 @@ footer .wrap{max-width:1160px}
         <button class="chip" data-f="none"><span class="sw"></span>순차 추진</button>
         <button class="chip" data-f="excluded"><span class="sw" style="background:repeating-linear-gradient(135deg,var(--excl) 0 2px,transparent 2px 4px)"></span>공모 제외</button>
       </div>
+      <div class="mapwrap">
       <div class="map-ui tr" role="group" aria-label="배경 지도">
         <button class="basebtn chip is-on" data-b="map">지도</button>
         <button class="basebtn chip" data-b="sat">위성</button>
@@ -587,6 +610,9 @@ ZONES.filter(z=>z.lat!=null).forEach(z=>{
 });
 }
 
+// 모든 구역이 보이도록 초기 화면 맞춤 (모바일에서 특히 필요)
+{ const all=L.featureGroup(Object.values(polys)); if(all.getLayers().length) map.fitBounds(all.getBounds().pad(0.06)); }
+
 /* ---------- 패널 ---------- */
 const panel=document.getElementById('panel');
 const Y=(t,w,cls)=>`<li class="${cls||''}"><span class="mk"></span><div>${t}<span class="when">${w}</span></div></li>`;
@@ -635,12 +661,19 @@ function renderPanel(z){
     <div class="eyebrow" style="margin-top:16px">다음 단계</div>
     <ol class="steps">${stepsFor(z)}</ol>
     <ul class="notes">${z.notes.map(n=>`<li>${n}</li>`).join('')}</ul>
-    <div class="srcs"><span>출처</span>${z.src.map(k=>`<a href="${SRC[k].u}" target="_blank" rel="noopener">${SRC[k].t}</a>`).join('')}</div>`;
+    <div class="srcs"><span>출처</span>${z.src.map(k=>`<a href="${SRC[k].u}" target="_blank" rel="noopener">${SRC[k].t}</a>`).join('')}</div>
+    <div class="share"><button type="button" id="copylink" data-id="${z.id}">이 구역 링크 복사</button><span id="copied" hidden>복사됨</span></div>`;
+  panel.querySelector('#copylink').addEventListener('click',async e=>{
+    const url=location.origin+location.pathname+'#z'+e.currentTarget.dataset.id;
+    try{await navigator.clipboard.writeText(url);}catch(err){const ta=document.createElement('textarea');ta.value=url;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(e2){}ta.remove();}
+    const c=panel.querySelector('#copied'); c.hidden=false; setTimeout(()=>{c.hidden=true;},1500);
+  });
 }
 
 /* ---------- 상호작용 ---------- */
 let filter='all';
 function setActive(id, fly){
+  if(id!=null) history.replaceState(null,'','#z'+id);
   document.querySelectorAll('.zmark').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.id)===id));
   Object.entries(polys).forEach(([k,g])=>g.setStyle({weight:Number(k)===id?3:1.5}));
   const z=byId(id); renderPanel(z);
@@ -666,7 +699,7 @@ function search(){
   else{qres.innerHTML=`<span class="dim">"${v}"은(는) 둔산지구 특별정비예정구역 48개 단지에 없습니다. 노은·송촌 등 다른 지구이거나 지구 밖 단지일 수 있습니다.</span>`;qres.classList.add('show');}
 }
 q.addEventListener('change',search); q.addEventListener('keydown',e=>{if(e.key==='Enter')search();});
-renderPanel(null);
+{ const m=location.hash.match(/^#z(\d{1,2})$/); const z=m&&byId(Number(m[1])); if(z){ setActive(z.id,true); } else renderPanel(null); }
 
 /* ---------- 타임라인 ---------- */
 const TL_ALL=[

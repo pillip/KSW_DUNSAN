@@ -1,0 +1,23 @@
+{
+ "name": "둔산 재건축 트래커",
+ "short_name": "둔산 트래커",
+ "description": "둔산지구 노후계획도시 정비 17개 구역의 선도지구 현황·절차·로드맵",
+ "start_url": "./",
+ "display": "standalone",
+ "background_color": "#f3f4f2",
+ "theme_color": "#1e4fd0",
+ "lang": "ko",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any maskable"
+  }
+ ]
+}
