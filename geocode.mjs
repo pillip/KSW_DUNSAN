@@ -2,7 +2,7 @@
 /**
  * 둔산 재건축 트래커 — 단지 경계·좌표 갱신 스크립트 (API 키 불필요)
  *
- * index.html 안의 <script id="zone-data"> JSON을 읽어
+ * data.js(window.DUNSAN_DATA)를 읽어
  *   1) pts[].osm 이 있는 단지: Overpass API로 OSM 폴리곤을 다시 받아 rings·중심점을 갱신
  *   2) pts[].osm 이 없는 단지(새로 추가한 단지): Nominatim으로 이름 검색해 OSM id를 찾은 뒤 1)과 동일
  * 결과를 같은 블록에 다시 씁니다.
@@ -16,17 +16,16 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
-const FILE = new URL('./index.html', import.meta.url);
+const FILE = new URL('./data.js', import.meta.url);
 const DRY = process.argv.includes('--dry');
 const UA = 'dunsan-tracker/1.0 (geocode script)';
 const BBOX = { s: 36.335, w: 127.355, n: 36.380, e: 127.420 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const html = readFileSync(FILE, 'utf8');
-const re = /(<script id="zone-data" type="application\/json">)([\s\S]*?)(<\/script>)/;
-const m = html.match(re);
-if (!m) { console.error('zone-data 블록을 찾지 못했습니다.'); process.exit(1); }
-const data = JSON.parse(m[2]);
+const src = readFileSync(FILE, 'utf8');
+const m = src.match(/^window\.DUNSAN_DATA\s*=\s*([\s\S]*);\s*$/);
+if (!m) { console.error('data.js 형식을 인식하지 못했습니다 (window.DUNSAN_DATA = {...};).'); process.exit(1); }
+const data = JSON.parse(m[1]);
 
 /* --- Nominatim: 이름 → OSM id (폴리곤 우선) --- */
 async function findOsmId(name, dong) {
@@ -117,7 +116,7 @@ for (const z of data.zones) {
   }
   console.log(`통합 ${z.id}구역  중심 ${z.lat}, ${z.lng}  단지 ${ok.length}/${z.cx.length}`);
 }
-data.geo = `OpenStreetMap (Overpass API) 단지 경계 폴리곤, ${new Date().toISOString().slice(0, 10)} 조회`;
+data.sources = { ...(data.sources||{}), osm: `OpenStreetMap 단지 경계 ${new Date().toISOString().slice(0, 10)} 조회` };
 if (DRY) process.exit(0);
-writeFileSync(FILE, html.replace(re, (_, a, __, c) => a + '\n' + JSON.stringify(data) + '\n' + c));
-console.log('index.html 갱신 완료');
+writeFileSync(FILE, 'window.DUNSAN_DATA = ' + JSON.stringify(data, null, 0) + ';\n');
+console.log('data.js 갱신 완료 — node validate.mjs 로 검사하세요');

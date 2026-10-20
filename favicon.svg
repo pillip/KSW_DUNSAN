@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="둔산 재건축 트래커">
+  <rect width="64" height="64" rx="14" fill="#1e4fd0"/>
+  <!-- 둔산 격자 블록: 3열 × 2행, 하나는 선도지구(녹색) -->
+  <g fill="#ffffff" fill-opacity="0.92">
+    <rect x="11" y="13" width="13" height="16" rx="2.5"/>
+    <rect x="27" y="13" width="10" height="16" rx="2.5"/>
+    <rect x="40" y="13" width="13" height="16" rx="2.5"/>
+    <rect x="11" y="33" width="13" height="18" rx="2.5"/>
+    <rect x="40" y="33" width="13" height="18" rx="2.5"/>
+  </g>
+  <rect x="27" y="33" width="10" height="18" rx="2.5" fill="#3fd08f"/>
+</svg>
