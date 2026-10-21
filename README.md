@@ -15,6 +15,7 @@
 | `geocode.mjs` | 새 단지를 추가할 때 OpenStreetMap에서 경계·중심점을 받아 `data.js`에 써 넣는다. |
 | `assets/logo.svg`, `favicon*.png`, `apple-touch-icon.png`, `icon-*.png`, `site.webmanifest` | 마크와 아이콘 세트. |
 | `og.png` | 링크 미리보기 이미지(1200×630). 실제 구역 폴리곤으로 그렸다. |
+| `audit.html` | **행정사무감사 질의 도우미**(의정활동용, 검색엔진 제외). 집행부 약속 추적표(localStorage), 질의 항목 빌더(10개 주제, 질의서·구두요지·자료요구서 형식), 업무보고·회의록 PDF 분석(pdf.js, 브라우저 내 처리), 선택형 AI 초안(본인 Claude API 키, 브라우저에서 직접 호출). 주민용 페이지 푸터에서만 링크. |
 
 외부 의존성(모두 키 불필요): Leaflet 1.9.4(cdnjs), 배경 지도는 OpenStreetMap 표준 타일 기본 · Esri World Imagery(위성) 전환, Google Fonts(IBM Plex Sans KR / Mono).
 
@@ -71,6 +72,13 @@ OSM 타일 서버는 Referer가 없거나 브라우저가 아닌 User-Agent(앱 
 - 복리시설 면적: 자료가 없어 사용자가 0~2.5점을 직접 지정.
 
 2차 공모 평가기준이 공고되면 `scoring`과 계산 로직을 맞춘다.
+
+## 행감 도우미 (audit.html)
+
+- 약속 추적표의 상태·메모와 선택한 주제는 브라우저 localStorage에만 저장된다. 다른 기기와 공유하려면 "추적표 복사"로 탭 구분 텍스트를 스프레드시트에 붙여 넣는다.
+- 업무보고 PDF 분석은 정규식 기반이다: 예산·집행·이월·불용 + 숫자가 있는 줄, "검토하겠·추진 예정·연내" 등 약속 표현, 노후계획도시 관련 키워드. 표 형태 PDF는 줄이 섞일 수 있으니 원문과 대조한다.
+- AI 초안은 `https://api.anthropic.com/v1/messages`를 브라우저에서 직접 호출한다(`anthropic-dangerous-direct-browser-access` 헤더). 키는 localStorage에만 저장되며 이 사이트에는 서버가 없다. 비공개 자료는 넣지 않는다.
+- 질의 주제·근거 문장은 `audit.html`의 `TOPICS`, 약속 목록은 `PROMISES` 배열에 있다. 행감 답변이 나오면 `PROMISES`에 결과를 반영하고 `TOPICS`의 근거를 갱신한다.
 
 ## 구역 링크
 

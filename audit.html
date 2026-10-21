@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>행정사무감사 질의 도우미</title>
+<meta name="description" content="둔산 노후계획도시 정비 관련 행정사무감사 질의 항목 빌더, 집행부 약속 추적, 업무보고 분석. 둔산 재건축 트래커 데이터 기반.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f3f4f2;--surface:#fff;--surface-2:#eaedea;--fg:#1b2230;--muted:#5d6675;--line:#d8dde2;--accent:#1e4fd0;--accent-soft:#e2e8fb;--ok:#167a54;--ok-soft:#d8efe4;--warn:#a86a0a;--warn-soft:#f8e8cc;--bad:#b23b3b;--bad-soft:#f6dede;--font-sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;--font-mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#0f1317;--surface:#171c22;--surface-2:#1f262e;--fg:#e7eaee;--muted:#9ba5b2;--line:#2b333d;--accent:#7d9dff;--accent-soft:#1c2742;--ok:#3fc48f;--ok-soft:#143427;--warn:#e9a93f;--warn-soft:#3a2a10;--bad:#ef7d7d;--bad-soft:#3b1d1d;color-scheme:dark}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);font-size:15px;line-height:1.55;word-break:keep-all;overflow-wrap:break-word;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+h1,h2,h3{margin:0;line-height:1.25;text-wrap:balance}h2{font-size:1.25rem;font-weight:600}h3{font-size:1rem;font-weight:600}
+p{margin:0}.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.dim{color:var(--muted)}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:14px;min-height:56px;flex-wrap:wrap;padding-block:6px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--fg);white-space:nowrap}
+.brand img{width:26px;height:26px;border-radius:7px;display:block}
+.brand .sub{font-weight:500;color:var(--muted);font-size:.86rem}
+.nav ul{list-style:none;margin:0 0 0 auto;padding:0;display:flex;gap:14px;overflow-x:auto;scrollbar-width:none}.nav ul::-webkit-scrollbar{display:none}
+.nav li a{color:var(--muted);font-size:.88rem;white-space:nowrap}
+.hero{padding-block:36px 20px}
+.hero h1{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:700;letter-spacing:-.015em}
+.hero .lead{color:var(--muted);max-width:66ch;margin-top:10px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:16px;font-size:.88rem}
+.meta b{font-weight:600}
+section{padding-block:30px}
+.sec-h{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;margin-bottom:12px}
+.sec-h p{color:var(--muted);font-size:.9rem;max-width:72ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:8px;padding:7px 12px;font:inherit;font-size:.86rem;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* 약속 추적 */
+.track{width:100%;border-collapse:collapse;font-size:.86rem}
+.track th,.track td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.track th{font-size:.72rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--surface-2);white-space:nowrap}
+.track td.w{white-space:nowrap}
+.track select{font:inherit;font-size:.82rem;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.track input[type=text]{font:inherit;font-size:.82rem;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);width:100%;min-width:140px}
+.st{display:inline-block;border-radius:999px;padding:2px 8px;font-size:.74rem;font-weight:600}
+.st.pending{background:var(--surface-2);color:var(--muted)}.st.ok{background:var(--ok-soft);color:var(--ok)}.st.warn{background:var(--warn-soft);color:var(--warn)}.st.bad{background:var(--bad-soft);color:var(--bad)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.track{min-width:900px}
+.tsum{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.86rem;margin-bottom:10px}
+/* 질의 빌더 */
+.builder{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.9fr);gap:18px}
+@media (max-width:900px){.builder{grid-template-columns:1fr}}
+.topic{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--surface)}
+.topic.on{border-color:var(--accent);background:var(--accent-soft)}
+.topic label.t{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-weight:600}
+.topic label.t input{margin-top:4px}
+.topic .facts{margin:8px 0 0 26px;padding:0;list-style:none;font-size:.84rem;color:var(--muted);display:grid;gap:3px}
+.topic .facts li::before{content:"·";margin-right:6px}
+.topic details{margin:8px 0 0 26px;font-size:.84rem}
+.topic summary{cursor:pointer;color:var(--accent)}
+.topic .qs{margin:6px 0 0;padding-left:18px}
+.topic .qs li{margin-top:3px}
+.draft{position:sticky;top:72px}
+.draft textarea{width:100%;min-height:420px;font:inherit;font-size:.86rem;line-height:1.5;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);resize:vertical;font-family:var(--font-mono)}
+.draft .row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.draft .row .msg{font-size:.8rem;color:var(--ok);font-weight:600}
+/* 분석 */
+.drop{border:2px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);font-size:.9rem;cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{display:none}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-top:14px}
+.hit{font-size:.84rem;border-bottom:1px solid var(--line);padding:7px 0}
+.hit:last-child{border-bottom:none}
+.hit .pg{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);margin-right:6px}
+.hit mark{background:var(--warn-soft);color:inherit;padding:0 2px;border-radius:2px}
+.hit .add{font-size:.74rem;margin-left:6px}
+.stat{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.stat span{font-size:.78rem;background:var(--surface-2);border-radius:999px;padding:3px 9px}
+.stat span b{font-family:var(--font-mono)}
+textarea.paste{width:100%;min-height:120px;font:inherit;font-size:.86rem;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);margin-top:10px}
+/* AI */
+.ai .row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.ai input,.ai select{font:inherit;font-size:.88rem;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);width:100%}
+.ai .out{white-space:pre-wrap;font-size:.9rem;line-height:1.6;margin-top:12px;padding:14px;background:var(--surface-2);border-radius:10px;min-height:60px}
+.ai .warnbox{font-size:.82rem;color:var(--muted);margin-top:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+footer{border-top:1px solid var(--line);padding-block:20px 44px;font-size:.8rem;color:var(--muted)}
+@media print{.nav,.drop,.ai,.btn,.draft .row,textarea.paste{display:none!important}.draft{position:static}.builder{grid-template-columns:1fr}body{background:#fff;color:#000}.track{min-width:0}}
+</style>
+</head>
+<body>
+<nav class="nav" aria-label="주요 메뉴">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="">둔산 재건축 트래커 <span class="sub">· 행감 도우미</span></a>
+    <ul>
+      <li><a href="#track">약속 추적</a></li>
+      <li><a href="#build">질의 빌더</a></li>
+      <li><a href="#analyze">업무보고 분석</a></li>
+      <li><a href="#ai">AI 초안</a></li>
+      <li><a href="index.html">주민용 페이지 →</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero wrap">
+  <div class="eyebrow">제10대 대전광역시의회 · 제300회 제2차 정례회 · 첫 행정사무감사</div>
+  <h1 style="margin-top:8px">둔산 노후계획도시 정비 — 행정사무감사 질의 도우미</h1>
+  <p class="lead">집행부가 공식 문서와 발표에서 약속한 일정을 추적하고, 트래커 데이터의 숫자를 근거로 질의 항목을 고르면 질의서 초안이 조립됩니다. 업무보고·회의록 PDF를 넣으면 예산 집행과 "검토하겠다"류 약속 문장을 찾아냅니다. 모든 처리는 브라우저 안에서 이뤄지고, 서버로 보내는 것은 없습니다.</p>
+  <div class="meta">
+    <span><b>감사 기간</b> 2026.11.6 ~ 11.17 (12일)</span>
+    <span><b>대상</b> 대전시·교육청·직속기관 등 66개 기관</span>
+    <span><b>소관</b> 산업건설위원회 → 도시주택국 (도시계획과 · 지구단위계획팀)</span>
+    <span><b>자료요구</b> 상임위별 1,287건 · 시민제보 10월 말까지</span>
+  </div>
+</header>
+
+<main>
+<section id="track" class="wrap">
+  <div class="sec-h">
+    <h2>집행부 약속·일정 추적</h2>
+    <p>기본계획(안)·FAQ·보도에서 대전시가 밝힌 약속과 기한입니다. 상태와 확인 내용은 이 브라우저에만 저장됩니다(localStorage). 행감 전후로 "확인됨/지연/미이행"을 갱신하세요.</p>
+  </div>
+  <div class="tsum" id="tsum"></div>
+  <div class="tablewrap"><table class="track" id="track-t"><thead><tr><th>#</th><th>약속·계획</th><th>기한</th><th>출처</th><th>상태</th><th>확인 내용 · 답변 요지</th><th>질의</th></tr></thead><tbody></tbody></table></div>
+  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="track-export">추적표 복사 (탭 구분)</button><button class="btn" id="track-reset">상태 초기화</button></div>
+</section>
+
+<section id="build" class="wrap">
+  <div class="sec-h">
+    <h2>질의 항목 빌더</h2>
+    <p>주제를 고르면 오른쪽에 질의서 초안이 조립됩니다. 숫자는 data.js와 기본계획(안)·FAQ에서 가져온 것이고, 괄호 안이 출처입니다. 초안을 고친 뒤 복사하거나 파일로 저장하세요.</p>
+  </div>
+  <div class="builder">
+    <div id="topics"></div>
+    <div class="draft card">
+      <div class="eyebrow">질의서 초안</div>
+      <div class="row" style="margin:8px 0 10px"><label style="font-size:.86rem">형식</label><select id="fmt" class="btn"><option value="full">질의서 (현황·질의·요구자료)</option><option value="short">구두질의 요지 (짧게)</option><option value="docs">자료요구서만</option></select><button class="btn" id="selall">전체 선택</button><button class="btn" id="selnone">해제</button></div>
+      <textarea id="draft" spellcheck="false"></textarea>
+      <div class="row"><button class="btn primary" id="copy">복사</button><a class="btn" id="dl" download="행감질의_둔산노후계획도시.txt">파일로 저장</a><button class="btn" id="toai">AI 초안에 넘기기 ↓</button><span class="msg" id="copied" hidden>복사됨</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="analyze" class="wrap">
+  <div class="sec-h">
+    <h2>업무보고·회의록 분석</h2>
+    <p>도시주택국 업무보고, 예산서, 지난 회기 회의록 PDF를 올리거나 본문을 붙여 넣으세요. 브라우저 안에서 텍스트를 뽑아 (1) 예산·집행·이월·불용 숫자가 있는 줄, (2) "검토하겠다·추진 예정·연내" 같은 약속 표현, (3) 노후계획도시 관련 문장을 찾습니다. 찾은 약속은 위 추적표에 추가할 수 있습니다.</p>
+  </div>
+  <div class="card">
+    <label class="drop" id="drop"><input type="file" id="file" accept="application/pdf,.pdf,.txt" multiple>PDF나 텍스트 파일을 여기에 끌어다 놓거나 클릭해서 선택 (여러 개 가능)</label>
+    <textarea class="paste" id="paste" placeholder="또는 본문을 여기에 붙여 넣고 아래 버튼을 누르세요"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center"><button class="btn primary" id="scan">붙여 넣은 텍스트 분석</button><span class="dim" id="scanmsg" style="font-size:.84rem"></span></div>
+    <div class="stat" id="astat"></div>
+    <div class="grid2" id="aout"></div>
+  </div>
+</section>
+
+<section id="ai" class="wrap ai">
+  <div class="sec-h">
+    <h2>AI 초안 (선택)</h2>
+    <p>본인의 Claude API 키를 넣으면 선택한 질의 항목, 추적표, 분석 결과를 묶어 질의서 초안을 생성합니다. 키는 이 브라우저의 localStorage에만 저장되고 Anthropic API로 직접 호출합니다(이 사이트의 서버는 없습니다). 키가 없어도 위 빌더는 그대로 쓸 수 있습니다.</p>
+  </div>
+  <div class="card">
+    <div class="row"><input type="password" id="apikey" placeholder="sk-ant-... (브라우저에만 저장)" autocomplete="off"><button class="btn" id="savekey">저장</button></div>
+    <div class="row" style="margin-top:8px"><input type="text" id="model" value="claude-sonnet-5-5" placeholder="모델 ID"><button class="btn primary" id="gen">초안 생성</button></div>
+    <div class="row" style="margin-top:8px;grid-template-columns:1fr"><input type="text" id="extra" placeholder="추가 지시 (예: 이주대책에 집중, 3개 질의로 압축, 답변 유도형 문장으로)"></div>
+    <div class="warnbox">생성 결과는 초안입니다. 숫자와 출처는 빌더의 근거 목록과 대조하세요. 외부 API 호출이므로 업무보고에 비공개 정보가 있으면 넣지 마세요.</div>
+    <div class="out" id="aiout">아직 생성한 초안이 없습니다.</div>
+    <div class="row" style="margin-top:8px;grid-template-columns:auto auto;justify-content:start"><button class="btn" id="aicopy">결과 복사</button><span class="dim" id="aistat" style="font-size:.82rem"></span></div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap">이 페이지는 둔산 재건축 트래커의 의정활동 지원용 부속 도구입니다. 약속·수치 출처: 대전광역시 「2035 노후계획도시정비 기본계획(안)」 둔산지구 공람본(2025.11), 대전시 노후계획도시정비 FAQ(2026.1), 국토교통부·대전시 발표와 보도(2026.7~10), 대전시의회 제297회 임시회 5분 자유발언(2026.7.24). 공식 회의록·답변서와 대조해 사용하세요.</div></footer>
+
+<script src="data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function(){
+'use strict';
+const D=window.DUNSAN_DATA||{zones:[],phases:[],total:48721,contrib:{totalEst:3909206,infraCost:1540329}};
+const Z=id=>D.zones.find(z=>z.id===id)||{};
+const fmt=n=>n==null?'—':Number(n).toLocaleString('ko-KR');
+const won=mw=>mw>=1e6?`${(mw/1e6).toFixed(2)}조 원`:`${Math.round(mw/100).toLocaleString('ko-KR')}억 원`;
+const $=id=>document.getElementById(id);
+const LS=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v));}catch(e){return null;}};
+
+/* ================= 1. 집행부 약속 추적 ================= */
+const PROMISES=[
+ {id:'p1',t:'선도지구(둔산 13·14, 송촌 6) 특별정비구역 지정·고시 연내 완료',due:'2026.12',src:'대전시 2026.7.15 발표(TJB)',topic:'t1'},
+ {id:'p2',t:'13·14구역 주민대표단 구성 승인 (토지등소유자 과반 동의)',due:'2026 하반기',src:'FAQ 2026.1 · 중도일보 2026.9',topic:'t1'},
+ {id:'p3',t:'찾아가는 미래도시지원센터 운영으로 선도지구 주민 행정절차 안내',due:'2026.8~',src:'대전시 2026.7.15(연합)',topic:'t8'},
+ {id:'p4',t:'2027년 둔산 4,000세대 · 송촌 2,000세대 추가 선정 (1~2개 구역)',due:'2027',src:'기본계획(안) 표6-7 · 대전시 2026.7.15',topic:'t2'},
+ {id:'p5',t:'1차 공모의 과열·평가방식 문제 보완한 차년도 정비예정물량·선정방안 마련',due:'2026 말~2027 초',src:'대전시 관계자 2026.7.15(중도일보) · 2026.8.10(서울경제)',topic:'t2'},
+ {id:'p6',t:'정보공개청구 시 신청 구역별 평가항목 점수 공개',due:'청구 시',src:'대전시 2026.7.15(중도일보)',topic:'t2'},
+ {id:'p7',t:'이주대책: 이주단지 조성·순환용 주택·이주비 지원 계획 수립 (최초 이주 2028, 연 4,872세대)',due:'2027까지',src:'기본계획(안) 6장 · 5분발언 2026.7.24',topic:'t3'},
+ {id:'p8',t:'노후계획도시 정비 및 지원에 관한 조례 제정 (공공기여 1구간 10% · 2구간 41%)',due:'제정 예정',src:'기본계획(안) 6장 (조례 제14조 예정)',topic:'t4'},
+ {id:'p9',t:'노후계획도시정비특별회계 설치·운용, 공공기여금 유동화 검토',due:'미정',src:'기본계획(안) 6장',topic:'t4'},
+ {id:'p10',t:'지방노후계획도시정비지원기구 설치, 총괄사업관리자 지정 검토',due:'미정',src:'기본계획(안) 6장 표6-1·6-3',topic:'t4'},
+ {id:'p11',t:'공원 59,724㎡ 추가 확보 (3·5·8·9·11·13·15·17구역), 도로 확폭 (1·2·4·10·11·12)',due:'특별정비계획 단계',src:'기본계획(안) 4장 · 6장 표6-13',topic:'t5'},
+ {id:'p12',t:'생활SOC: 도서관 3개소(1·5·6구역), 체육시설 1개소(5구역), 공영주차장 1개소(17구역), 자족시설 2개소(12·17구역)',due:'2순위~3순위',src:'기본계획(안) 6장 표6-13·6-14',topic:'t5'},
+ {id:'p13',t:'임대 혼합 구역(4·12구역) 차년도부터 주민제안 등으로 추진 가능',due:'2027~',src:'FAQ 2026.1',topic:'t6'},
+ {id:'p14',t:'학교 수용: 2035 완료 시 학급당 28명 기준 검토, 일부 학교 배치 조정 · 성천초 2027.3 폐지',due:'특별정비계획 단계',src:'기본계획(안) 4장 표4-24·4-25',topic:'t7'},
+ {id:'p15',t:'둔산 학원가·트램 공사 겹침 구간 통학안전 대책',due:'착공 전',src:'5분발언 2026.7.24 (시 답변 미확인)',topic:'t7'},
+ {id:'p16',t:'10년 장기계획 홍보 강화: 공청회·주민설명회 확대, 온라인 안내, 찾아가는 설명회, 소식지',due:'상시',src:'5분발언 2026.7.24 제안',topic:'t8'},
+ {id:'p17',t:'1구역 내부 갈등: 특별정비예정구역 변경·분할 불가 입장 유지',due:'—',src:'대전시 2026.9(중도일보) · FAQ',topic:'t6'},
+ {id:'p18',t:'기본계획 고시본의 공람안 대비 변경사항 공개 (세대수·면적·용적률·구역)',due:'고시 후',src:'고시 2026.8 말',topic:'t9'},
+];
+const ST={pending:'미확인',ok:'확인됨',warn:'지연',bad:'미이행'};
+let tstate=LS('audit.track')||{};
+function renderTrack(){
+  const tb=$('track-t').querySelector('tbody');
+  tb.innerHTML=PROMISES.map((p,i)=>{const s=tstate[p.id]||{};return `<tr>
+    <td class="num w">${i+1}</td><td>${p.t}</td><td class="w num">${p.due}</td><td class="dim" style="font-size:.78rem">${p.src}</td>
+    <td class="w"><select data-id="${p.id}" class="tsel"><option value="pending"${!s.st||s.st==='pending'?' selected':''}>미확인</option><option value="ok"${s.st==='ok'?' selected':''}>확인됨</option><option value="warn"${s.st==='warn'?' selected':''}>지연</option><option value="bad"${s.st==='bad'?' selected':''}>미이행</option></select></td>
+    <td><input type="text" data-id="${p.id}" class="tnote" value="${(s.note||'').replace(/"/g,'&quot;')}" placeholder="답변 요지, 날짜, 담당"></td>
+    <td class="w"><a href="#build" data-topic="${p.topic}" class="tgo">${TOPICS.find(t=>t.id===p.topic)?.n||''}</a></td></tr>`;}).join('');
+  tb.querySelectorAll('.tsel').forEach(s=>s.addEventListener('change',e=>{tstate[e.target.dataset.id]={...(tstate[e.target.dataset.id]||{}),st:e.target.value};LS('audit.track',tstate);sum();}));
+  tb.querySelectorAll('.tnote').forEach(s=>s.addEventListener('input',e=>{tstate[e.target.dataset.id]={...(tstate[e.target.dataset.id]||{}),note:e.target.value};LS('audit.track',tstate);}));
+  tb.querySelectorAll('.tgo').forEach(a=>a.addEventListener('click',()=>{const cb=document.querySelector(`#topics input[value="${a.dataset.topic}"]`);if(cb&&!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change'));}}));
+  sum();
+}
+function sum(){const c={pending:0,ok:0,warn:0,bad:0};PROMISES.forEach(p=>c[(tstate[p.id]||{}).st||'pending']++);$('tsum').innerHTML=Object.entries(c).map(([k,v])=>`<span class="st ${k}">${ST[k]} ${v}</span>`).join('');}
+$('track-export').addEventListener('click',async()=>{const txt=['#\t약속\t기한\t출처\t상태\t확인내용'].concat(PROMISES.map((p,i)=>[i+1,p.t,p.due,p.src,ST[(tstate[p.id]||{}).st||'pending'],(tstate[p.id]||{}).note||''].join('\t'))).join('\n');try{await navigator.clipboard.writeText(txt);alert('복사됐습니다. 스프레드시트에 붙여 넣으세요.');}catch(e){prompt('복사:',txt);}});
+$('track-reset').addEventListener('click',()=>{if(confirm('상태와 메모를 모두 지울까요?')){tstate={};LS('audit.track',tstate);renderTrack();}});
+
+/* ================= 2. 질의 항목 빌더 ================= */
+const z13=Z(13),z14=Z(14),z4=Z(4),z12=Z(12),z11=Z(11),z8=Z(8),z1=Z(1);
+const sel=D.zones.filter(z=>z.status==='selected'),app=D.zones.filter(z=>z.status==='applied');
+const selU=sel.reduce((a,z)=>a+z.units,0),appU=app.reduce((a,z)=>a+z.units,0);
+const TOPICS=[
+ {id:'t1',n:'선도지구 후속 절차',title:'선도지구(13·14구역) 특별정비구역 지정 진행 상황',
+  facts:[`선정 2026.7.15: 13구역 크로바·목련 ${fmt(z13.units)}세대, 14구역 한가람·공작한양 ${fmt(z14.units)}세대 — 합계 ${fmt(selU)}세대, 지구의 ${(selU/D.total*100).toFixed(1)}% (국토부·대전시)`,
+   '대전시는 연내 특별정비구역 지정·고시를 목표로 밝힘 (2026.7.15, TJB)','절차: 토지등소유자 과반 동의서 → 선도지구 지정·특별정비구역 지정(특별정비계획 포함) 신청 → 지방위원회 심의 → 고시 (FAQ)',
+   '추진위 목표: 13구역 2026년 말 추진위 → 2027년 말 조합 · 14구역 2027년 3분기 조합설립 (추진위 발표)','기본계획 모델: 1년차 사업 행정절차 1.5년 → 최초 이주 2028 → 입주 2031 (6장)'],
+  qs:['13·14구역의 주민대표단 구성 승인 신청 접수·승인 현황과 동의율은? 연내 특별정비구역 지정·고시가 가능한지, 지연 시 사유와 수정 일정은?','특별정비계획에 공원(크로바 내 약 5,596㎡)·공공기여 계획이 반영되고 있는지, 시가 제시한 가이드라인이 있는지?','송촌 6구역(2,545세대)과 둔산 두 구역의 진행 속도 차이와 원인은?','찾아가는 미래도시지원센터의 운영 실적(방문 횟수·상담 건수·주요 질의)은?'],
+  docs:['선도지구 3개 구역별 후속 절차 진행표(단계·일자·담당)','주민대표단 구성 승인 신청서 접수·처리 현황','특별정비계획 수립 지원(컨설팅·지원기구) 예산 집행 현황','찾아가는 미래도시지원센터 운영 실적']},
+ {id:'t2',n:'2027 물량·2차 공모',title:'2027년 정비예정물량과 2차 선도지구 선정방안',
+  facts:[`기본계획(안) 표6-7: 2027~2030년 매년 4,000세대, 2031~2034년 5,500세대, 2035년 5,721세대 — 합계 ${fmt(D.total)}세대`,`1차 미선정 7개 구역 ${fmt(appU)}세대가 2차 대기: 1구역 ${fmt(z1.units)} · 8구역 ${fmt(z8.units)} · 11구역 ${fmt(z11.units)} 등. 4,000세대 물량으로는 한 해 1~2개 구역`,
+   '1차 평가: 동의율 70점(50%→10, 100%→70), 정주환경 10, 도시기능 10, 파급효과 10. 신청 평균 동의율 89%, 선정 구역 96.2% (FAQ·보도)','시 관계자: "올해 선도지구 추진 과정의 성과와 주민 의견을 분석해 차년도 정비예정물량과 합리적 선정방안 마련" (2026.7.15) · 과도한 경쟁 개선 제도 정비 (2026.8.10)','탈락 구역 일부가 정보공개청구 검토; 시는 청구 시 항목별 점수 공개 방침'],
+  qs:['2027년 정비예정물량 4,000세대(+50% 범위)는 확정인지, 국토부 협의 일정은? 5,440세대(8구역)·5,150세대(11구역)처럼 단독으로 물량을 넘는 구역의 처리 원칙은?','2차 선정 평가기준에서 바꾸는 항목은 무엇인지(동의율 배점, 상대평가 항목, 기부채납 가점)? 공고 시점은?','1차 평가 점수 정보공개청구 접수·처리 결과와, 평가 공정성 이의에 대한 시의 입장은?','동의율 확보 과정의 과열(동의서 징구업체, 허위 동의율 홍보 등)에 대한 실태 파악과 대책은?'],
+  docs:['1차 선도지구 평가위원회 구성·평가 결과(구역별 항목 점수)','2027년 정비예정물량 산정 근거와 국토부 협의 문서','2차 공모 평가기준 개정안(초안)','정보공개청구 접수·처리 대장(선도지구 관련)']},
+ {id:'t3',n:'이주대책',title:'이주대책과 주택시장 안정',
+  facts:['기본계획(안) 6장: 총 이주수요 48,721세대, 연간 이주 약 4,872세대, 연간 1.7개 구역·2~9개 단지 정비. 최초 이주 2028, 최종 이주 2037','연도별 허용세대수 총량: 2026 17,104 → 2027 12,537 → 2028 20,076 → 2029 17,184 → 2030 7,811 (표6-8) — 2030년이 가장 빠듯','특별정비예정구역 유형 중 이주대책 지원형(이주단지 조성)은 둔산에 0곳 (표4-54)','5분발언(2026.7.24): 이주단지 조성, 순환용 주택 공급, 이주비·임차료 지원 등 이주대책을 시가 직접 책임져야','재원: 이주단지 조성비, 공공주택 임차료·관리비·주거이전비, 임시상가 건설비 등 보조·융자 가능 (6장 표6-10)'],
+  qs:['2028년 최초 이주(13·14구역 약 5,252세대)에 대비한 이주단지·순환용 주택 후보지와 공급 규모, 확보 일정은? 둔산 안에 이주대책 지원형 구역이 없는데 어디에 조성하는지?','2030년 허용세대수 총량이 7,811세대로 떨어지는 이유와, 그 해 선정·이주가 겹칠 때의 조정 계획은?','이주비·임차료 지원의 재원(특별회계·주택도시기금)과 지원 기준(소유자·세입자·상가)은 언제 정하는지?','둔산·서구 전세시장 모니터링 체계(지표·주기·대응 기준)가 있는지?'],
+  docs:['연차별 이주계획(안)과 이주단지·순환용주택 후보지 검토 자료','허용세대수 총량 산정 근거(표6-8)','이주대책 재원 조달 계획과 특별회계 설치 추진 현황','서구 임대차 시장 모니터링 자료']},
+ {id:'t4',n:'공공기여·조례',title:'공공기여 비율 조례와 특별회계',
+  facts:[`기본계획(안) 표6-9: 둔산 17개 구역 공공기여 추정 합계 ${won(D.contrib.totalEst)} (기준지 크로바, 기준용적률을 정비용적률로 가정한 임시 추정) · 기반시설 설치비 추정 ${won(D.contrib.infraCost)}`,
+   `구역별 추정: 11구역 ${won(z11.pub?.est)} · 8구역 ${won(z8.pub?.est)} · 13구역 ${won(z13.pub?.est)} · 12구역 ${won(z12.pub?.est)}`,'비율: 기준용적률까지 증가분의 10%, 기준용적률 초과분의 41% — 「대전광역시 노후계획도시 정비 및 지원에 관한 조례」 제14조로 제정 예정 (6장)','확정은 사업시행계획 인가 시 감정평가(2개 법인 평균), 납부는 준공검사 신청 전 (FAQ). 공공주택(공공임대 50% 이상)·기반시설·자족시설 부지로 대납 가능','특별회계 재원: 공공기여금, 재건축부담금, 광역교통시설부담금 등. 공공기여금 유동화(ABS)와 HUG 보증 검토 (6장)'],
+  qs:['조례 제정 일정(입법예고·의회 제출 시점)과 10%/41% 비율의 산정 근거는? 1기 신도시(성남·고양 등) 조례와 비교해 어떤 수준인지?','공공기여 추정 3.91조 원 중 기반시설 설치비 1.54조 원을 제외한 차액의 사용 원칙(특별정비예정구역 외 재투자 범위)은?','특별회계 설치 조례와 유동화 검토 일정, 지방노후계획도시정비지원기구·총괄사업관리자 지정 계획은?','조례 제정 전에 특별정비계획을 수립하는 선도지구에는 어떤 비율을 적용하는지?'],
+  docs:['노후계획도시 정비 및 지원 조례(안) 전문과 비율 산정 검토서','표6-9 공공기여 추정 산출 근거(토지단가 산정 방식)','특별회계 설치·운용 계획(안)','타 지자체 조례 비교표']},
+ {id:'t5',n:'기반시설·공원',title:'기반시설 확충 계획과 재원',
+  facts:['기준용적률 360%는 공원 용량이 가장 빠듯해 공원 59,724㎡ 추가 확보를 전제로 산정 (FAQ·4장). 확보 위치: 진달래 8,100㎡, 황실타운 7,308㎡, 샘머리2 10,880㎡, 수정타운 4,020㎡, 가람 북측 14,000㎡, 크로바 5,596㎡, 큰마을 5,820㎡, 개나리 4,000㎡','도로 확폭: 1·2·4·10·11·12구역 (유형1·3). 기본계획의 도로 확폭은 반드시 이행 (FAQ)','자족시설: 12구역 부지 4,200㎡·연면적 약 22,000㎡ (행정복지센터·문화·교육연구·벤처), 17구역 부지 13,936㎡·연면적 41,150㎡ (생활복리·업무·교육연구, 공영주차장 하부)','기반시설 설치비 추정 1조 5,403억: 공원 토지비 7,149억, 도로 토지비 2,910억, 자족시설 3,780억, 기존 도로·공원 정비 5,176억, 상하수도·전력 등 1조 8,513억(기타) (표6-13)','설치 우선순위: 1순위 도로·공원 → 2순위 주차장·도서관·체육시설 → 3순위 자족시설 → 4순위 간선·상하수도 (표6-14)'],
+  qs:['공원 59,724㎡ 확보가 안 되면 기준용적률 360%의 전제가 무너지는데, 구역별 공원 확보를 특별정비계획에서 어떻게 담보하는지(공공기여 의무화 여부)?','기존 도로·공원 정비와 상하수도 주관로 등 "기타 노후기반시설" 비용은 공공기여만으로 충당 가능한지, 시 예산 부담 추정은?','12구역 자족시설에 둔산3동 행정복지센터를 이전하는 계획의 주민 의견수렴과 일정은?','둔산 공원축(갈마공원~둔지미~샘머리) 폭원을 80m에서 줄인 이유와 최종 계획은?'],
+  docs:['구역별 기반시설 설치계획도와 면적표','기반시설 설치비 추정 산출 내역(표6-13)','2030 공원녹지기본계획과의 정합성 검토','자족시설 도입 기능 검토서(12·17구역)']},
+ {id:'t6',n:'임대 혼합·갈등 구역',title:'임대 혼합 구역(4·12)과 구역 내 갈등 대응',
+  facts:[`4구역 둔산주공1·3단지(임대)+은뜰마을2단지(분양) ${fmt(z4.units)}세대, 12구역 보라1·2단지 ${fmt(z12.units)}세대 — 임대 혼합으로 1차 공모 제외. FAQ: "이번 공모에서만 제외, 차년도부터 주민제안 등으로 추진 가능"`,'4구역 종전용적률 197%, 12구역 166%로 지구 최저 — 사업성 보완 없이는 추진 어려움','1구역(강변·상아·초원·상록수 3,899세대): 강변·상아 별도 추진 움직임 → 시 "정비예정구역 변경 불가" 답변(2026.9). FAQ: 분할·일부 제외 불가','임대주택 세입자 이주대책은 공공(LH·도시공사) 협의 사항'],
+  qs:['4·12구역의 2027년 이후 추진 경로(주민제안 요건, 임대 세대 이주대책, LH·대전도시공사 협의)는 구체화됐는지?','종전용적률이 낮은 구역(4·12·16·17)의 사업성 보완 수단(용적률 인센티브, 공공시행 등) 검토 여부는?','1구역처럼 단지 간 갈등이 있는 구역에 대한 조정 절차(갈등조정 기구, 관리협정)는 있는지?'],
+  docs:['임대 혼합 구역 추진 방안 검토서','LH·대전도시공사 협의 자료(영구임대 재정비·이주)','구역별 갈등·민원 접수 현황']},
+ {id:'t7',n:'학교·통학안전',title:'학생 수용과 통학안전',
+  facts:['기본계획(안) 4장: 2035년 일괄 준공 가정 시 학급당 28명 기준으로 초·중학교 배치 검토, 일부 학교 배치 조정 필요. 대전성천초 2027.3 폐지 예정, 성룡초 통폐합','둔산지구 계획인구 15.8만 → 19.9만, 세대 7.4만 → 9.5만 (국토부 특위 2026.8.10)','5분발언: 둔산은 학원가와 트램(2호선) 공사가 겹쳐 이주·착공 시 통학로 안전 위협','기본계획 공원 확보 계획에 갑천초 운동장 협소 대체공간(3구역 진달래 공원) 포함'],
+  qs:['교육청과의 협의 결과(학교별 2035 예상 학급당 학생수, 배치 조정 대상 학교)와 후속 협의 일정은? 2027 성천초 폐지가 둔산 정비와 어떻게 연계되는지?','13·14구역 이주·철거(2028~)와 트램 2호선 공사 구간이 겹치는 통학로 구간 목록과 안전대책(통학버스, 임시 보행로, 공사시간 제한)은?','특별정비계획 수립 지침에 통학안전·학원가 보행 대책을 포함시킬 계획이 있는지?'],
+  docs:['교육청 협의 결과(표4-24·4-25 원자료)','트램 2호선 공정표와 둔산 정비구역 중첩 분석','통학로 안전대책(안)']},
+ {id:'t8',n:'주민 소통',title:'장기 계획 홍보와 주민 소통',
+  facts:['5분발언: 대다수 주민이 10년 장기계획임을 모른 채 낙담, 오해가 지역 간 위화감·행정 불신으로 이어질 우려','대전시 FAQ(2026.1) 21쪽 배포, 기본계획(안) 공람 2025.12 (7개 분책 PDF 게시), 입주자대표회장 간담회 2026.3.20','선도지구 선정 후 "찾아가는 미래도시지원센터" 운영 발표 (2026.7.15)','기본계획 6장: 타운매니지먼트, 주민 간 관리협정, 정비사업 주민 역량강화 교육'],
+  qs:['선정·미선정 구역 주민 대상 설명회 개최 실적(회차·참석·주요 질의)과 2027 공모 전 계획은?','공람안 대비 고시본 변경사항을 주민이 알 수 있는 안내(요약본·비교표) 제공 여부는?','주민 역량강화 교육·갈등조정 프로그램(타운매니지먼트) 예산과 일정은?','대전시 홈페이지 노후계획도시 안내 창구(FAQ 갱신, 진행 현황 공개) 운영 계획은?'],
+  docs:['주민설명회·간담회 개최 실적','미래도시지원센터 운영 실적','홍보·소통 예산 집행 현황']},
+ {id:'t9',n:'고시본 변경·정합성',title:'기본계획 고시본과 공람안의 차이',
+  facts:['공람안(2025.11): 17개 구역 48,721세대, 면적 2,647,064㎡, 기준용적률 363/288/375%, 계획세대 94,665호 · 고시(2026.8 말) 보도: 계획세대 9만 4천 호','국토부 특위(2026.8.10): 둔산 7만4천 → 9만5천 가구, 이주수요 48,721세대, 연 약 4,900세대 — 공람안 표6-7(연 4,000~5,721)과 평균치는 같지만 연차 배분은 다름','특별정비예정구역 변경은 시행령 제5조에 따라 3년 이내 범위 경미한 변경으로 조정 가능 (6장)'],
+  qs:['고시본에서 공람안 대비 바뀐 항목(구역 경계·세대수·용적률·연차별 물량·공공기여 추정)의 목록과 사유는?','시의회 의견청취 과정에서 제출된 의견 중 반영·미반영 사항은?','5년 단위 타당성 검토 외에 연차별 정비물량을 조정하는 기준(주택 수급 지표)은 무엇인지?'],
+  docs:['기본계획 고시문 전문과 공람안 대비표','주민공람 의견 처리 결과','시의회 의견청취 회신 문서']},
+ {id:'t10',n:'예산·집행',title:'노후계획도시 정비 관련 예산 집행',
+  facts:['점검 대상: 기본계획 수립 용역비, 선도지구 평가위원회 운영비, 미래도시지원센터·컨설팅 예산, 홍보비, 2027년 본예산 편성안','기본계획 6장: 기본계획 수립 비용·현황조사·지원기구 운영비·이주대책 비용은 보조·융자 대상','업무보고·예산서 PDF를 아래 "업무보고 분석"에 넣으면 집행률·이월·불용 항목이 추출됩니다'],
+  qs:['2026년 노후계획도시 정비 관련 예산의 과목별 편성·집행률과 이월·불용 사유는?','2027년 본예산에 이주대책·지원기구·주민지원 항목이 어느 규모로 편성됐는지?','국토부 공모·국비 지원(노후계획도시 정비 지원사업) 신청 실적은?'],
+  docs:['2026년 세출예산 집행 현황(노후계획도시 관련 전 과목)','2027년 예산 편성안 중 관련 항목','용역·위탁 계약 현황(기본계획·평가·지원센터)']},
+];
+let chosen=new Set(LS('audit.topics')||['t1','t2','t3']);
+function renderTopics(){
+  $('topics').innerHTML=TOPICS.map(t=>`<div class="topic${chosen.has(t.id)?' on':''}"><label class="t"><input type="checkbox" value="${t.id}"${chosen.has(t.id)?' checked':''}><span>${t.title}</span></label>
+    <ul class="facts">${t.facts.map(f=>`<li>${f}</li>`).join('')}</ul>
+    <details><summary>질의 ${t.qs.length}건 · 요구자료 ${t.docs.length}건</summary><ol class="qs">${t.qs.map(q=>`<li>${q}</li>`).join('')}</ol><p class="dim" style="margin-top:6px">요구자료: ${t.docs.join(' · ')}</p></details></div>`).join('');
+  $('topics').querySelectorAll('input').forEach(cb=>cb.addEventListener('change',e=>{e.target.checked?chosen.add(e.target.value):chosen.delete(e.target.value);LS('audit.topics',[...chosen]);e.target.closest('.topic').classList.toggle('on',e.target.checked);compose();}));
+}
+function compose(){
+  const fmtv=$('fmt').value,sel=TOPICS.filter(t=>chosen.has(t.id));
+  const head=`제10대 대전광역시의회 제300회 제2차 정례회 행정사무감사\n산업건설위원회 — 도시주택국 (둔산 노후계획도시 정비)\n질의 항목 초안 · ${new Date().toLocaleDateString('sv-SE')} · ${sel.length}개 주제\n${'─'.repeat(44)}\n`;
+  let n=0,body='';
+  for(const t of sel){n++;
+    if(fmtv==='docs'){body+=`\n[${n}] ${t.title}\n`+t.docs.map((d,i)=>`  ${n}-${i+1}. ${d}`).join('\n')+'\n';continue;}
+    body+=`\n질의 ${n}. ${t.title}\n`;
+    if(fmtv==='full'){body+=`\n■ 현황\n`+t.facts.map(f=>`  - ${f}`).join('\n')+'\n';}
+    body+=`\n■ 질의\n`+t.qs.map((q,i)=>`  ${fmtv==='short'?'·':`${i+1})`} ${q}`).join('\n')+'\n';
+    if(fmtv==='full'){body+=`\n■ 요구 자료\n`+t.docs.map(d=>`  □ ${d}`).join('\n')+'\n';}
+    const rel=PROMISES.filter(p=>p.topic===t.id);
+    if(fmtv==='full'&&rel.length){body+=`\n■ 집행부 약속 확인\n`+rel.map(p=>`  [${ST[(tstate[p.id]||{}).st||'pending']}] ${p.t} (기한 ${p.due} · ${p.src})${(tstate[p.id]||{}).note?` — ${tstate[p.id].note}`:''}`).join('\n')+'\n';}
+  }
+  if(!sel.length)body='\n(왼쪽에서 주제를 선택하세요)\n';
+  const foot=`\n${'─'.repeat(44)}\n근거: 2035 대전 노후계획도시정비 기본계획(안) 둔산지구 공람본(2025.11), 대전시 노후계획도시정비 FAQ(2026.1), 국토부·대전시 발표(2026.7.15, 8.10), 서구 공동주택 현황(2026.8). 수치는 공람안 기준이며 고시본과 다를 수 있음.`;
+  $('draft').value=head+body+foot;
+  $('dl').href='data:text/plain;charset=utf-8,'+encodeURIComponent($('draft').value);
+}
+$('fmt').addEventListener('change',compose);
+$('selall').addEventListener('click',()=>{chosen=new Set(TOPICS.map(t=>t.id));LS('audit.topics',[...chosen]);renderTopics();compose();});
+$('selnone').addEventListener('click',()=>{chosen=new Set();LS('audit.topics',[]);renderTopics();compose();});
+$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('draft').value);}catch(e){$('draft').select();document.execCommand('copy');}$('copied').hidden=false;setTimeout(()=>$('copied').hidden=true,1500);});
+$('toai').addEventListener('click',()=>{location.hash='#ai';});
+$('draft').addEventListener('input',()=>{$('dl').href='data:text/plain;charset=utf-8,'+encodeURIComponent($('draft').value);});
+
+/* ================= 3. 업무보고·회의록 분석 ================= */
+let analysis={docs:[],hits:[]};
+const RX={
+  money:/(예산|집행|이월|불용|사고이월|명시이월|집행률|예산액|집행액|잔액|교부|보조|용역비|위탁)/,
+  num:/(\d{1,3}(,\d{3})+|\d+(\.\d+)?\s?%|\d+\s?(백만|천원|억|원))/,
+  promise:/(검토하겠|검토 중|추진하겠|추진 예정|추진할 계획|계획입니다|마련하겠|마련할 계획|연내|상반기|하반기|조속히|적극 검토|협의하겠|협의 중|보완하겠|개선하겠|수립하겠|수립 중|지정할 계획|고시할 계획|반영하겠|노력하겠|예정입니다|예정이다|목표로)/,
+  topic:/(노후계획도시|선도지구|특별정비|둔산|송촌|이주대책|이주단지|순환용|공공기여|기준용적률|통합정비|재건축|주민대표단|미래도시지원센터|특별회계)/
+};
+function scanText(name,text){
+  const lines=text.split(/\r?\n/).map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l.length>6);
+  const hits=[];
+  lines.forEach((l,i)=>{
+    const isTopic=RX.topic.test(l),isMoney=RX.money.test(l)&&RX.num.test(l),isPromise=RX.promise.test(l);
+    if(isMoney||isPromise||isTopic){
+      const page=(text.slice(0,text.indexOf(l)).match(/===== p(\d+) =====/g)||[]).pop();
+      hits.push({doc:name,i,line:l.slice(0,260),page:page?page.replace(/[^\d]/g,''):'',money:isMoney,promise:isPromise,topic:isTopic});
+    }
+  });
+  return {name,lines:lines.length,hits};
+}
+async function extractPdf(file){
+  const buf=await file.arrayBuffer();
+  if(!window.pdfjsLib)throw new Error('pdf.js를 불러오지 못했습니다');
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;let out='';
+  for(let p=1;p<=pdf.numPages;p++){const pg=await pdf.getPage(p);const tc=await pg.getTextContent();let line='',lastY=null,txt='';
+    for(const it of tc.items){const y=Math.round(it.transform[5]);if(lastY!==null&&Math.abs(y-lastY)>3){txt+=line+'\n';line='';}line+=(line&&!line.endsWith(' ')?' ':'')+it.str;lastY=y;}
+    out+=`\n===== p${p} =====\n`+txt+line;}
+  return out.replace(/\u0000/g,'');
+}
+async function handleFiles(files){
+  $('scanmsg').textContent='읽는 중…';
+  for(const f of files){
+    try{const text=f.type==='application/pdf'||/\.pdf$/i.test(f.name)?await extractPdf(f):await f.text();
+      const r=scanText(f.name,text);analysis.docs.push(r);}
+    catch(e){$('scanmsg').textContent=`${f.name}: ${e.message}`;}
+  }
+  renderAnalysis();$('scanmsg').textContent=`${files.length}개 파일 분석 완료`;
+}
+function renderAnalysis(){
+  const all=analysis.docs.flatMap(d=>d.hits);
+  const money=all.filter(h=>h.money),prom=all.filter(h=>h.promise),topic=all.filter(h=>h.topic&&!h.money&&!h.promise);
+  $('astat').innerHTML=analysis.docs.map(d=>`<span>${d.name} <b>${d.lines}</b>줄 · 적중 <b>${d.hits.length}</b></span>`).join('')+(all.length?`<span>예산 <b>${money.length}</b></span><span>약속 표현 <b>${prom.length}</b></span><span>관련 문장 <b>${topic.length}</b></span>`:'');
+  const hl=(l,rx)=>l.replace(rx,m=>`<mark>${m}</mark>`);
+  const box=(title,arr,rx,addable)=>`<div class="card"><div class="eyebrow">${title} · ${arr.length}</div>${arr.length?arr.slice(0,80).map(h=>`<div class="hit"><span class="pg">${h.doc.slice(0,18)}${h.page?' p'+h.page:''}</span>${hl(h.line,rx)}${addable?`<a href="#track" class="add" data-line="${encodeURIComponent(h.line)}" data-src="${encodeURIComponent(h.doc+(h.page?' p'+h.page:''))}">+ 추적표에 추가</a>`:''}</div>`).join('')+(arr.length>80?`<div class="dim" style="font-size:.78rem;margin-top:6px">상위 80건만 표시</div>`:''):'<p class="dim" style="font-size:.84rem;margin-top:6px">없음</p>'}</div>`;
+  $('aout').innerHTML=box('예산·집행·이월·불용',money,RX.money,false)+box('집행부 약속 표현',prom,RX.promise,true)+box('노후계획도시 관련 문장',topic,RX.topic,true);
+  $('aout').querySelectorAll('.add').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const line=decodeURIComponent(a.dataset.line),src=decodeURIComponent(a.dataset.src);const id='u'+Date.now();PROMISES.push({id,t:line,due:'—',src:'업무보고: '+src,topic:'t10'});renderTrack();location.hash='#track';}));
+}
+$('file').addEventListener('change',e=>handleFiles([...e.target.files]));
+const drop=$('drop');['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>handleFiles([...e.dataTransfer.files]));
+$('scan').addEventListener('click',()=>{const t=$('paste').value.trim();if(!t)return;analysis.docs.push(scanText('붙여넣기 '+(analysis.docs.length+1),t));renderAnalysis();$('scanmsg').textContent='분석 완료';});
+
+/* ================= 4. AI 초안 (선택) ================= */
+$('apikey').value=LS('audit.key')||'';
+$('model').value=LS('audit.model')||'claude-sonnet-5-5';
+$('savekey').addEventListener('click',()=>{LS('audit.key',$('apikey').value.trim());LS('audit.model',$('model').value.trim());$('aistat').textContent='저장됨 (이 브라우저에만)';});
+$('gen').addEventListener('click',async()=>{
+  const key=$('apikey').value.trim();if(!key){$('aistat').textContent='API 키를 입력하세요.';return;}
+  LS('audit.key',key);LS('audit.model',$('model').value.trim());
+  const sel=TOPICS.filter(t=>chosen.has(t.id));
+  const hits=analysis.docs.flatMap(d=>d.hits).filter(h=>h.money||h.promise).slice(0,60).map(h=>`- (${h.doc}${h.page?' p'+h.page:''}) ${h.line}`).join('\n');
+  const track=PROMISES.map(p=>`- [${ST[(tstate[p.id]||{}).st||'pending']}] ${p.t} (기한 ${p.due}, ${p.src})${(tstate[p.id]||{}).note?' — '+tstate[p.id].note:''}`).join('\n');
+  const prompt=`당신은 대전광역시의회 산업건설위원회 소속 시의원의 보좌진입니다. 2026년 11월 6~17일 제10대 의회 첫 행정사무감사에서 도시주택국(노후계획도시 정비, 둔산지구)을 상대로 할 질의서를 작성합니다.
+
+작성 원칙:
+- 질의마다 "현황(근거 수치·출처) → 질의(구체적 질문 2~4개, 답변을 유도하는 문장) → 요구 자료" 구조.
+- 숫자는 아래 자료에 있는 것만 쓰고, 출처를 괄호로 붙입니다. 자료에 없는 수치는 만들지 않습니다.
+- 집행부 약속 중 "지연·미이행·미확인"인 항목은 이행 여부를 직접 묻는 질의로 만듭니다.
+- 업무보고 추출 문장 중 집행률이 낮거나 이월·불용이 있으면 사유를 묻는 질의를 추가합니다.
+- 문체: 의회 질의서 형식의 격식체. 수사는 빼고, 질문은 짧게.
+${$('extra').value.trim()?'\n추가 지시: '+$('extra').value.trim()+'\n':''}
+[선택한 주제와 근거]
+${sel.map(t=>`## ${t.title}\n근거:\n${t.facts.map(f=>'- '+f).join('\n')}\n기본 질의:\n${t.qs.map(q=>'- '+q).join('\n')}\n요구자료: ${t.docs.join('; ')}`).join('\n\n')}
+
+[집행부 약속 추적표]
+${track}
+
+[업무보고·회의록에서 추출한 문장]
+${hits||'(없음)'}
+
+[지구 기본 수치]
+둔산 특별정비예정구역 17개, 48개 단지, 이주수요 ${fmt(D.total)}세대. 1차 선도지구 13·14구역 ${fmt(selU)}세대(2026.7.15). 연차별 정비물량 ${D.phases.map(p=>p.year+' '+fmt(p.units)).join(', ')}. 공공기여 추정 ${won(D.contrib.totalEst)}, 기반시설 설치비 추정 ${won(D.contrib.infraCost)}. 최초 이주 2028, 최초 입주 2031, 최종 입주 2040.`;
+  $('aistat').textContent='생성 중…';$('gen').disabled=true;$('aiout').textContent='';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:$('model').value.trim(),max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+    const j=await r.json();
+    if(!r.ok)throw new Error(j.error?.message||('HTTP '+r.status));
+    $('aiout').textContent=(j.content||[]).map(c=>c.text||'').join('\n');
+    $('aistat').textContent=`완료 · 입력 ${j.usage?.input_tokens||'?'} / 출력 ${j.usage?.output_tokens||'?'} 토큰`;
+  }catch(e){$('aiout').textContent='';$('aistat').textContent='오류: '+e.message;}
+  $('gen').disabled=false;
+});
+$('aicopy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('aiout').textContent);$('aistat').textContent='복사됨';}catch(e){}});
+
+renderTopics();renderTrack();compose();
+})();
+</script>
+</body>
+</html>
