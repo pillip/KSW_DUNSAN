@@ -9,7 +9,14 @@
       "toDaedeok": { "label": "연구단지 방향 (만년동→도룡동)", "endMatch": "과학공원|도룡|연구단지|엑스포|유성", "ud": "1" },
       "toDunsan":  { "label": "둔산 방향 (도룡동→만년동)",   "endMatch": "대덕대교네거리|만년|둔산|정부청사|서구", "ud": "2" }
     },
-    "_directions_comment": "방향은 endNodeName 이 endMatch 에 맞는지로 먼저 정하고, 둘 다 아니면 udType(ud) 으로 정한다. discover.json 을 보고 ud 값(1 상행/2 하행)이 실제 방향과 반대면 두 값을 서로 바꾼다."
+    "_directions_comment": "방향은 endNodeName 이 endMatch 에 맞는지로 먼저 정하고, 둘 다 아니면 udType(ud) 으로 정한다. discover.json 을 보고 ud 값(1 상행/2 하행)이 실제 방향과 반대면 두 값을 서로 바꾼다.",
+    "adjacent": [
+      { "key": "approach:toDaedeok", "label": "교량 진입 (만년상아아파트→대덕대교네거리)", "s": "만년상아", "e": "대덕대교네거리" },
+      { "key": "exit:toDunsan",      "label": "교량 진출 (대덕대교네거리→만년상아아파트)", "s": "대덕대교네거리", "e": "만년상아" },
+      { "key": "approach:toDunsan",  "label": "교량 진입 (북부소방서→과학공원네거리)",     "s": "북부소방서", "e": "과학공원" },
+      { "key": "exit:toDaedeok",     "label": "교량 진출 (과학공원네거리→북부소방서)",     "s": "과학공원", "e": "북부소방서" }
+    ],
+    "_adjacent_comment": "교량 앞뒤 대덕대로 링크. 링크 단위로 보관한다(정체가 교량 밖으로 번지는지 보는 용도). 나머지 대덕대로 링크는 detour:daedeokro 그룹 평균으로만 저장."
   },
   "detours": [
     { "key": "daedeokro","label": "대덕대로 (교량 외 구간)", "match": "대덕대로" },

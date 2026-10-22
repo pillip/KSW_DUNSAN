@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS 용 launchd 작업 — 교통정보센터(tportal) 통계를 매일 06:40 에 받는다.
+  tportal 은 클라우드·해외 IP 를 막으므로 집·사무실 네트워크의 Mac 에서 돌릴 때 쓴다.
+  cron 과 달리 잠자는 동안 놓친 실행을 깨어나면 바로 돌린다.
+
+  설치
+    1. 아래 두 곳의 /Users/me/KSW_DUNSAN 을 실제 clone 경로로 바꾼다.
+    2. cp traffic/launchd.tportal.plist ~/Library/LaunchAgents/kr.ksw.tportal.plist
+    3. launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/kr.ksw.tportal.plist
+       (즉시 한 번 돌려 보기: launchctl kickstart -k gui/$(id -u)/kr.ksw.tportal)
+    제거: launchctl bootout gui/$(id -u)/kr.ksw.tportal
+  로그: ~/ksw-cron.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>kr.ksw.tportal</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/me/KSW_DUNSAN/traffic/cron.sh</string>
+    <string>tportal</string>
+    <string>7</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/me/KSW_DUNSAN</string>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>6</integer><key>Minute</key><integer>40</integer></dict>
+  <key>StandardOutPath</key><string>/Users/me/ksw-cron.log</string>
+  <key>StandardErrorPath</key><string>/Users/me/ksw-cron.log</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+</dict>
+</plist>

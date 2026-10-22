@@ -96,24 +96,30 @@ OSM 타일 서버는 Referer가 없거나 브라우저가 아닌 User-Agent(앱 
 | `traffic/import-tportal.mjs` | `tportal-export.json` → `history.json`(구간별 1시간 속도) · `volume.json`(VDS 교통량) · `baseline.json`(통제 전 기준). collect-tportal이 같은 함수를 쓴다. |
 | `traffic/import-volume.mjs` | 범용 CSV 변환기(엑셀 저장본 등). UTF-8/EUC-KR 자동, 열 이름 자동 인식. |
 | `traffic/data/latest.json` | 마지막 수집값. `raw/YYYY-MM-DD.json` 하루치 표본(35일 보관). `daily.json` 일별·시간대별 집계(영구). `history.json`·`volume.json`·`baseline.json`은 교통정보센터 통계(수동 갱신). |
-| `traffic/cron.sh` | **정기 수집 본체.** 국내 머신 cron에서 `api`(10분)·`tportal`(매일) 모드로 pull→수집→push. |
+| `traffic/cron.sh` | **정기 수집 본체.** cron/launchd에서 `api`(10분)·`tportal`(매일) 모드로 pull→수집→push. POSIX sh. |
+| `traffic/launchd.tportal.plist` | macOS launchd 작업 예시(tportal 매일 06:40). |
 | `.github/workflows/traffic.yml` | 수동 실행 전용(discover 확인·임시 수집). 스케줄 없음. |
 
 ### 운영 방식 — 국내 머신 cron
 
-tportal(교통정보센터)은 해외 IP를 막아 GitHub 호스팅 러너에서 접속이 안 되고, GitHub의 `schedule`은 지연·누락이 잦다. 그래서 정기 수집은 둘 다 **국내 PC·서버의 cron**이 맡고(`traffic/cron.sh`), GitHub 워크플로는 수동 실행용으로만 남긴다.
+tportal(교통정보센터)은 해외 IP뿐 아니라 **클라우드 IP(AWS 서울 리전 포함)도 막는다**(2026.10.22 확인: GitHub 러너·AWS ap-northeast-2 모두 connect timeout). 공공데이터포털 API(apis.data.go.kr)는 어디서든 된다. GitHub의 `schedule`은 지연·누락이 잦다. 그래서:
+
+- `cron.sh api`(10분, 공공데이터포털): 국내든 해외든 아무 서버(AWS 등)의 cron.
+- `cron.sh tportal`(매일, 교통정보센터): **집·사무실 네트워크(통신사 IP)의 Mac/PC**에서. macOS는 `traffic/launchd.tportal.plist`(잠자는 동안 놓친 실행을 깨어나면 돌림)를 쓴다. 상시 머신이 없으면 수동 경로(아래)를 한 달에 한 번.
+
+두 작업이 다른 머신에서 같은 저장소에 push해도 `cron.sh`가 pull --rebase로 맞춘다. GitHub 워크플로는 수동 실행용으로만 남긴다.
 
 ```
 # 한 번만
 git clone git@github.com:pillip/KSW_DUNSAN.git && cd KSW_DUNSAN     # push 되는 계정으로
 node -v                                                               # 20 이상
 echo "DATA_GO_KR_KEY=공공데이터포털_인증키" > traffic/.env              # .gitignore 에 있음
-traffic/cron.sh api        # 손으로 한 번 돌려 push 까지 되는지 확인
-traffic/cron.sh tportal 30 # 교통정보센터 통계 30일치
+sh traffic/cron.sh api        # 손으로 한 번 돌려 push 까지 되는지 확인
+sh traffic/cron.sh tportal 30 # 교통정보센터 통계 30일치
 
-# crontab -e
-*/10 * * * *  /절대경로/KSW_DUNSAN/traffic/cron.sh api     >> $HOME/ksw-cron.log 2>&1
-40 6 * * *    /절대경로/KSW_DUNSAN/traffic/cron.sh tportal >> $HOME/ksw-cron.log 2>&1
+# crontab -e  (sh 로 부르면 실행 권한이 없어도 된다)
+*/10 * * * *  sh /절대경로/KSW_DUNSAN/traffic/cron.sh api     >> $HOME/ksw-cron.log 2>&1
+40 6 * * *    sh /절대경로/KSW_DUNSAN/traffic/cron.sh tportal >> $HOME/ksw-cron.log 2>&1
 ```
 
 - `cron.sh`는 pull → 수집 → 변경 있으면 commit·push. 겹침은 lock으로 막고, 실패하면 다음 회차에 자연히 복구된다. 로그 한 줄에 결과가 남는다.

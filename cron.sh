@@ -9,15 +9,21 @@
 #   1. 이 저장소를 clone 하고 push 가 되는지 확인 (SSH 키 또는 git credential helper).
 #   2. Node 20 이상. `node -v`
 #   3. traffic/.env 파일에 한 줄:  DATA_GO_KR_KEY=인증키   (Decoding·Encoding 어느 쪽이든 됨, .gitignore 에 올라가 있음)
-#   4. crontab -e
-#        */10 * * * *  /절대경로/KSW_DUNSAN/traffic/cron.sh api     >> $HOME/ksw-cron.log 2>&1
-#        40 6 * * *    /절대경로/KSW_DUNSAN/traffic/cron.sh tportal >> $HOME/ksw-cron.log 2>&1
+#   4. crontab -e   (GitHub 웹으로 올린 파일은 실행 권한이 빠지므로 sh 로 부른다)
+#        */10 * * * *  sh /절대경로/KSW_DUNSAN/traffic/cron.sh api     >> $HOME/ksw-cron.log 2>&1
+#        40 6 * * *    sh /절대경로/KSW_DUNSAN/traffic/cron.sh tportal >> $HOME/ksw-cron.log 2>&1
 #      macOS 는 잠자기에 들어가면 cron 이 안 돌므로 시스템 설정 → 배터리/에너지 → 자동 잠자기 방지, 또는 `sudo pmset -a sleep 0`.
 #   5. GitHub 쪽 .github/workflows/traffic.yml 의 schedule 블록은 지운다 (이중 수집·push 충돌 방지). traffic-tportal.yml 은 삭제.
 #
 # 겹침 방지(lock)·로그·실패해도 다음 회차에 자동 복구. 같은 분에 두 번 돌아도 collect.mjs 가 덮어쓴다.
-set -uo pipefail
-export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.nvm/current/bin:$HOME/.volta/bin:$PATH"
+# sh 로 실행돼도(실행 권한이 없거나 `sh cron.sh` 로 불렀을 때) 동작하도록 POSIX sh 문법만 쓴다.
+set -u
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.volta/bin:$HOME/.local/bin:$PATH"
+# cron 의 PATH 에는 nvm 으로 설치한 node 가 없다 → ~/.nvm/versions/node/* 중 가장 최신 버전을 쓴다
+if ! command -v node >/dev/null 2>&1 && [ -d "$HOME/.nvm/versions/node" ]; then
+  NV="$(ls -d "$HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -V | tail -1)"; [ -n "$NV" ] && export PATH="$NV:$PATH"
+fi
+command -v node >/dev/null 2>&1 || { echo "$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') node 를 찾지 못함 — cron.sh 의 PATH 에 node 경로를 추가하세요 (which node)"; exit 1; }
 MODE="${1:-api}"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO" || exit 1
@@ -33,7 +39,7 @@ trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 
 [ -f "$REPO/traffic/.env" ] && set -a && . "$REPO/traffic/.env" && set +a
 
-git pull --rebase -q origin HEAD 2>/dev/null || git pull --rebase -q || { echo "$NOW [$MODE] git pull 실패"; exit 1; }
+git pull --rebase --autostash -q || { echo "$NOW [$MODE] git pull 실패 (원격 연결·충돌 확인)"; exit 1; }
 
 case "$MODE" in
   api)
@@ -51,7 +57,7 @@ if git diff --cached --quiet; then echo "$NOW [$MODE] 변경 없음"; exit 0; fi
 git -c user.name="traffic-bot" -c user.email="actions@users.noreply.github.com" commit -q -m "$MSG"
 for i in 1 2 3; do
   git push -q && { echo "$NOW [$MODE] push 완료"; exit 0; }
-  git pull --rebase -q -X theirs || true
+  git pull --rebase --autostash -q -X theirs || true
 done
 echo "$NOW [$MODE] push 실패 (다음 회차에 다시 시도)"
 exit 1

@@ -97,19 +97,25 @@ function parseResponse(text) {
   return { items, totalCnt: +tag(t, 'totalCnt') };
 }
 const tag = (s, n) => { const m = s.match(new RegExp(`<${n}>([\\s\\S]*?)</${n}>`)); return m ? m[1].trim() : ''; };
-const norm = o => ({
-  id: String(o.linkID ?? o.linkId ?? o.LINK_ID ?? ''),
-  road: o.roadName ?? '', s: o.startNodeName ?? '', e: o.endNodeName ?? '',
-  ud: String(o.udType ?? ''), len: +o.linkLength || 0,
-  spd: +o.speed, tt: +o.travelT, cg: +o.congestion,
-  sqc: +o.linkSqc || 0,
-});
+// travelT: 문서에는 초라고 돼 있지만 실제 값은 linkLength(m) ÷ speed(km/h) 로, 초의 1/3.6 이다 (2026.10.22 확인).
+// 그래서 통행시간은 길이와 속도로 직접 계산한다: 초 = m ÷ (km/h ÷ 3.6).
+const ttCalc = (len, spd) => len > 0 && spd > 0 ? Math.round(len / (spd / 3.6)) : 0;
+const norm = o => {
+  const len = +o.linkLength || 0, spd = +o.speed;
+  return {
+    id: String(o.linkID ?? o.linkId ?? o.LINK_ID ?? ''),
+    road: o.roadName ?? '', s: o.startNodeName ?? '', e: o.endNodeName ?? '',
+    ud: String(o.udType ?? ''), len, spd, tt: ttCalc(len, spd) || +o.travelT || 0, cg: +o.congestion,
+    sqc: +o.linkSqc || 0,
+  };
+};
 
 /* ---------- 링크 분류 ---------- */
 const rx = p => p ? new RegExp(p) : null;
 const B = CFG.bridge, DIRS = B.directions;
 const bridgeRx = rx(B.match), roadRx = rx(B.road);
 const detours = CFG.detours.map(d => ({ ...d, rx: rx(d.match) }));
+const adjacent = (B.adjacent ?? []).map(a => ({ ...a, sRx: rx(a.s), eRx: rx(a.e) }));
 
 function classify(l) {
   // 교량 구간: 링크 ID를 직접 적었으면 그것만. 아니면 도로명이 대덕대로이고 양쪽 노드가 모두 교량 노드(대덕대교·과학공원)인 링크.
@@ -120,9 +126,11 @@ function classify(l) {
     for (const [k, d] of Object.entries(DIRS)) if (d.ud && d.ud === l.ud) return `bridge:${k}`;
     return 'bridge:unknown';
   }
+  for (const a of adjacent) if ((!roadRx || roadRx.test(l.road)) && a.sRx.test(l.s) && a.eRx.test(l.e)) return a.key;
   for (const d of detours) if (d.rx.test(l.road)) return `detour:${d.key}`;
   return null;
 }
+const perLink = grp => grp.startsWith('bridge:') || adjacent.some(a => a.key === grp); // 링크 단위 보관 여부 (우회도로는 그룹 평균만)
 
 /* ---------- 파일 유틸 ---------- */
 const readJson = (p, fb) => existsSync(p) ? JSON.parse(readFileSync(p, 'utf8')) : fb;
@@ -135,6 +143,7 @@ function groupsMeta() {
   const g = {};
   for (const [k, d] of Object.entries(DIRS)) g[`bridge:${k}`] = { label: `${B.label} ${d.label}`, kind: 'bridge' };
   g['bridge:unknown'] = { label: `${B.label} 방향 미확정`, kind: 'bridge' };
+  for (const a of adjacent) g[a.key] = { label: a.label, kind: 'adjacent' };
   for (const d of detours) g[`detour:${d.key}`] = { label: d.label, kind: 'detour' };
   return g;
 }
@@ -144,10 +153,11 @@ function aggregateDay(raw) {
   const out = {};
   const byGroup = {};
   raw.rows.forEach(([min, idx, spd, tt, cg]) => {
-    const grp = raw.links[raw.ids[idx]]?.grp;
+    const L = raw.links[raw.ids[idx]]; const grp = L?.grp;
     if (!grp || !(spd > 0)) return;
     const g = byGroup[grp] ??= { byMin: {} };
-    (g.byMin[min] ??= []).push({ spd, tt, cg });
+    // agg 행(우회도로 그룹 평균): cg 는 혼잡 링크 비율(0~1). 링크 행: cg 는 소통등급 코드 → 혼잡 여부 0/1. 통행시간은 길이·속도로 다시 계산.
+    (g.byMin[min] ??= []).push(L.agg ? { spd, tt: null, c: cg } : { spd, tt: ttCalc(L.len, spd) || tt, c: cg >= 2 ? 1 : 0 });
   });
   for (const [grp, g] of Object.entries(byGroup)) {
     const hours = Array.from({ length: 24 }, () => []), hoursTt = Array.from({ length: 24 }, () => []), hoursCg = Array.from({ length: 24 }, () => []);
@@ -160,7 +170,7 @@ function aggregateDay(raw) {
       const h = Math.floor(+min / 60);
       hours[h].push(spd); all.push(spd);
       if (tt != null) { hoursTt[h].push(tt); allTt.push(tt); }
-      for (const s of samples) { cgs.push(s.cg); hoursCg[h].push(s.cg >= 2 ? 1 : 0); }
+      for (const s of samples) { cgs.push(s.c); hoursCg[h].push(s.c); }
     }
     const slice = (a, b) => hours.slice(a, b).flat();
     out[grp] = {
@@ -170,7 +180,7 @@ function aggregateDay(raw) {
       tt: allTt.length ? Math.round(mean(allTt)) : null,
       am: slice(...PEAK.am).length ? r1(mean(slice(...PEAK.am))) : null,
       pm: slice(...PEAK.pm).length ? r1(mean(slice(...PEAK.pm))) : null,
-      cg: cgs.length ? Math.round(cgs.filter(c => c >= 2).length / cgs.length * 1000) / 1000 : null,
+      cg: cgs.length ? Math.round(mean(cgs) * 1000) / 1000 : null,
       h: hours.map(a => a.length ? r1(mean(a)) : null),
       tth: hoursTt.some(a => a.length) ? hoursTt.map(a => a.length ? Math.round(mean(a)) : null) : undefined,
       cgh: hoursCg.map(a => a.length ? Math.round(mean(a) * 100) / 100 : null),
@@ -239,14 +249,19 @@ async function main() {
   // raw 누적
   const rawPath = join(RAW, `${now.date}.json`);
   const raw = readJson(rawPath, { date: now.date, ids: [], links: {}, rows: [] });
-  for (const l of picked) {
-    if (!raw.links[l.id]) { raw.links[l.id] = { road: l.road, s: l.s, e: l.e, ud: l.ud, len: l.len, grp: l.grp }; raw.ids.push(l.id); }
-    const idx = raw.ids.indexOf(l.id);
-    // 같은 분(minute)에 중복 실행되면 덮어쓴다
-    const dup = raw.rows.findIndex(r => r[0] === now.minute && r[1] === idx);
-    const row = [now.minute, idx, r1(l.spd), Math.round(l.tt) || 0, l.cg | 0];
+  const putRow = (id, meta, spd, tt, cg) => {
+    if (!raw.links[id]) { raw.links[id] = meta; raw.ids.push(id); }
+    const idx = raw.ids.indexOf(id);
+    const dup = raw.rows.findIndex(r => r[0] === now.minute && r[1] === idx); // 같은 분에 중복 실행되면 덮어쓴다
+    const row = [now.minute, idx, r1(spd), Math.round(tt) || 0, cg];
     if (dup >= 0) raw.rows[dup] = row; else raw.rows.push(row);
+  };
+  const byGrp = {};
+  for (const l of picked) {
+    if (perLink(l.grp)) putRow(l.id, { road: l.road, s: l.s, e: l.e, ud: l.ud, len: l.len, grp: l.grp }, l.spd, l.tt, l.cg | 0);
+    else { const g = byGrp[l.grp] ??= { spd: [], c: [] }; if (l.spd > 0) { g.spd.push(l.spd); g.c.push(l.cg >= 2 ? 1 : 0); } }
   }
+  for (const [grp, g] of Object.entries(byGrp)) if (g.spd.length) putRow(`grp:${grp}`, { grp, agg: true, n: g.spd.length }, mean(g.spd), 0, Math.round(mean(g.c) * 1000) / 1000);
   writeJson(rawPath, raw);
 
   // latest
@@ -258,7 +273,7 @@ async function main() {
   }
   const latest = {
     t: now.iso,
-    links: picked.map(l => ({ id: l.id, grp: l.grp, road: l.road, s: l.s, e: l.e, ud: l.ud, len: l.len, spd: r1(l.spd), tt: Math.round(l.tt) || null, cg: l.cg | 0, sqc: l.sqc })),
+    links: picked.filter(l => perLink(l.grp)).map(l => ({ id: l.id, grp: l.grp, road: l.road, s: l.s, e: l.e, ud: l.ud, len: Math.round(l.len), spd: r1(l.spd), tt: Math.round(l.tt) || null, cg: l.cg | 0, sqc: l.sqc })),
     groups: Object.fromEntries(Object.entries(groups).map(([k, g]) => [k, {
       n: g.n, spd: g.spd.length ? r1(mean(g.spd)) : null,
       tt: k.startsWith('bridge:') && g.ttOk && g.n ? Math.round(g.tt) : null,

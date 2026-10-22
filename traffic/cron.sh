@@ -18,12 +18,17 @@
 # 겹침 방지(lock)·로그·실패해도 다음 회차에 자동 복구. 같은 분에 두 번 돌아도 collect.mjs 가 덮어쓴다.
 # sh 로 실행돼도(실행 권한이 없거나 `sh cron.sh` 로 불렀을 때) 동작하도록 POSIX sh 문법만 쓴다.
 set -u
-export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.nvm/current/bin:$HOME/.volta/bin:$PATH"
+export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.volta/bin:$HOME/.local/bin:$PATH"
+# cron 의 PATH 에는 nvm 으로 설치한 node 가 없다 → ~/.nvm/versions/node/* 중 가장 최신 버전을 쓴다
+if ! command -v node >/dev/null 2>&1 && [ -d "$HOME/.nvm/versions/node" ]; then
+  NV="$(ls -d "$HOME"/.nvm/versions/node/v*/bin 2>/dev/null | sort -V | tail -1)"; [ -n "$NV" ] && export PATH="$NV:$PATH"
+fi
+command -v node >/dev/null 2>&1 || { echo "$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') node 를 찾지 못함 — cron.sh 의 PATH 에 node 경로를 추가하세요 (which node)"; exit 1; }
 MODE="${1:-api}"
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO" || exit 1
 NOW="$(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
- 
+
 # lock (macOS 에 flock 이 없어 mkdir 로)
 LOCK="$REPO/traffic/.lock"
 if ! mkdir "$LOCK" 2>/dev/null; then
@@ -31,11 +36,11 @@ if ! mkdir "$LOCK" 2>/dev/null; then
   if [ -n "$(find "$LOCK" -mmin +20 2>/dev/null)" ]; then rmdir "$LOCK" && mkdir "$LOCK" || exit 0; else echo "$NOW [$MODE] 이전 실행이 아직 진행 중 — 건너뜀"; exit 0; fi
 fi
 trap 'rmdir "$LOCK" 2>/dev/null' EXIT
- 
+
 [ -f "$REPO/traffic/.env" ] && set -a && . "$REPO/traffic/.env" && set +a
- 
+
 git pull --rebase --autostash -q || { echo "$NOW [$MODE] git pull 실패 (원격 연결·충돌 확인)"; exit 1; }
- 
+
 case "$MODE" in
   api)
     if [ -z "${DATA_GO_KR_KEY:-}" ]; then echo "$NOW [api] traffic/.env 에 DATA_GO_KR_KEY 가 없습니다"; exit 2; fi
@@ -46,7 +51,7 @@ case "$MODE" in
     MSG="traffic: ${NOW%% *} 교통정보센터 통계 [skip ci]" ;;
   *) echo "사용법: cron.sh api | tportal [일수]"; exit 2 ;;
 esac
- 
+
 git add traffic/data
 if git diff --cached --quiet; then echo "$NOW [$MODE] 변경 없음"; exit 0; fi
 git -c user.name="traffic-bot" -c user.email="actions@users.noreply.github.com" commit -q -m "$MSG"
