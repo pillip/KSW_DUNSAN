@@ -1,0 +1,50 @@
+name: traffic collect
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      discover:
+        description: '링크 목록만 확인 (traffic/data/discover.json 생성, 수집은 하지 않음)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: traffic-collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 수집
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: |
+          if [ "${{ inputs.discover }}" = "true" ]; then
+            node traffic/collect.mjs --discover
+          else
+            node traffic/collect.mjs
+          fi
+      - name: 커밋
+        run: |
+          git config user.name "traffic-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add traffic/data
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -m "traffic: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') 수집 [skip ci]"
+          for i in 1 2 3; do
+            git push && break
+            git pull --rebase -X theirs || true
+          done
