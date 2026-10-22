@@ -84,7 +84,7 @@ OSM 타일 서버는 Referer가 없거나 브라우저가 아닌 User-Agent(앱 
 
 ## 대덕대교 통행 모니터 (traffic.html)
 
-트램 2호선 공사로 대덕대교 5차로가 통제되는 기간(2026.10.19~2029.5.12)의 소통 변화를 매일 기록하는 대시보드. 공공데이터포털 「대전광역시_대전교통정보 서비스」(15157924, 무료·자동승인)의 `getTrafficInfoAll`을 GitHub Actions가 10분마다 호출해 결과를 저장소에 커밋하고(git scraping), 페이지는 그 JSON만 읽는다. 브라우저 쪽에는 키가 없다.
+트램 2호선 공사로 대덕대교 5차로가 통제되는 기간(2026.10.19~2029.5.12)의 소통 변화를 매일 기록하는 대시보드. 공공데이터포털 「대전광역시_대전교통정보 서비스」(15157924, 무료·자동승인)의 `getTrafficInfoAll`을 국내 머신의 cron이 10분마다 호출해 결과를 저장소에 커밋하고(git scraping), 페이지는 그 JSON만 읽는다. 브라우저 쪽에는 키가 없다.
 
 | 파일 | 역할 |
 |---|---|
@@ -92,37 +92,43 @@ OSM 타일 서버는 Referer가 없거나 브라우저가 아닌 User-Agent(앱 
 | `traffic/links.json` | 수집할 링크 규칙(교량 구간·방향·우회도로 정규식, 링크 ID 고정), 통제 정보. |
 | `traffic/collect.mjs` | 수집·집계. `--discover`(링크 이름 확인), `--rebuild`(raw로 daily 재계산), `--from-file`(저장된 응답으로 테스트). |
 | `traffic/tportal-fetch.js` | 대전교통 빅데이터 플랫폼에서 구간 속도·VDS 교통량 과거 자료를 내려받는 브라우저 콘솔 스크립트 → `tportal-export.json`. |
-| `traffic/collect-tportal.mjs` | 교통정보센터 통계를 Node로 받아 `history.json`·`volume.json` 갱신 (매일 워크플로). |
+| `traffic/collect-tportal.mjs` | 교통정보센터 통계를 Node로 받아 `history.json`·`volume.json` 갱신 (`cron.sh tportal`). 해외 IP에서는 접속 불가. |
 | `traffic/import-tportal.mjs` | `tportal-export.json` → `history.json`(구간별 1시간 속도) · `volume.json`(VDS 교통량) · `baseline.json`(통제 전 기준). collect-tportal이 같은 함수를 쓴다. |
 | `traffic/import-volume.mjs` | 범용 CSV 변환기(엑셀 저장본 등). UTF-8/EUC-KR 자동, 열 이름 자동 인식. |
 | `traffic/data/latest.json` | 마지막 수집값. `raw/YYYY-MM-DD.json` 하루치 표본(35일 보관). `daily.json` 일별·시간대별 집계(영구). `history.json`·`volume.json`·`baseline.json`은 교통정보센터 통계(수동 갱신). |
-| `.github/workflows/traffic.yml` | `*/10 * * * *` 스케줄 + 수동 실행(discover 옵션). 커밋 메시지에 `[skip ci]`. |
-| `.github/workflows/traffic-tportal.yml` | 매일 06:40 KST 교통정보센터 통계 수집(최근 7일). 수동 실행 시 days·baseline 입력. |
+| `traffic/cron.sh` | **정기 수집 본체.** 국내 머신 cron에서 `api`(10분)·`tportal`(매일) 모드로 pull→수집→push. |
+| `.github/workflows/traffic.yml` | 수동 실행 전용(discover 확인·임시 수집). 스케줄 없음. |
 
-### 처음 설정 (한 번)
+### 운영 방식 — 국내 머신 cron
 
-1. 공공데이터포털에서 「대전광역시_대전교통정보 서비스」 활용신청 → 마이페이지 인증키(Decoding) 복사.
-2. 저장소 Settings → Secrets and variables → Actions → `DATA_GO_KR_KEY` 등록.
-3. Actions → traffic collect → Run workflow, **discover 체크** → 커밋된 `traffic/data/discover.json`에서 대덕대로 링크가 `bridge:toDunsan` / `bridge:toDaedeok`으로 잡혔는지, `ud`(1 상행/2 하행)와 실제 방향이 맞는지 확인. 어긋나면 `links.json`의 `bridge.linkIds`에 ID를 직접 적거나 `directions.*.ud`를 서로 바꾼다.
-4. 이후 자동. 첫 집계는 다음 정각 이후 페이지에 보인다. 저장소에 60일간 push가 없으면 GitHub가 스케줄을 끄므로, 봇 커밋이 멈춘 뒤에는 Actions 탭에서 다시 켠다.
+tportal(교통정보센터)은 해외 IP를 막아 GitHub 호스팅 러너에서 접속이 안 되고, GitHub의 `schedule`은 지연·누락이 잦다. 그래서 정기 수집은 둘 다 **국내 PC·서버의 cron**이 맡고(`traffic/cron.sh`), GitHub 워크플로는 수동 실행용으로만 남긴다.
+
+```
+# 한 번만
+git clone git@github.com:pillip/KSW_DUNSAN.git && cd KSW_DUNSAN     # push 되는 계정으로
+node -v                                                               # 20 이상
+echo "DATA_GO_KR_KEY=공공데이터포털_인증키" > traffic/.env              # .gitignore 에 있음
+traffic/cron.sh api        # 손으로 한 번 돌려 push 까지 되는지 확인
+traffic/cron.sh tportal 30 # 교통정보센터 통계 30일치
+
+# crontab -e
+*/10 * * * *  /절대경로/KSW_DUNSAN/traffic/cron.sh api     >> $HOME/ksw-cron.log 2>&1
+40 6 * * *    /절대경로/KSW_DUNSAN/traffic/cron.sh tportal >> $HOME/ksw-cron.log 2>&1
+```
+
+- `cron.sh`는 pull → 수집 → 변경 있으면 commit·push. 겹침은 lock으로 막고, 실패하면 다음 회차에 자연히 복구된다. 로그 한 줄에 결과가 남는다.
+- macOS면 잠자기 때 cron이 멈추므로 자동 잠자기를 끈다(`sudo pmset -a sleep 0`). 노트북보다는 상시 켜진 머신이 맞다.
+- 머신이 며칠 꺼져 있으면 그 기간의 10분 자료는 비고(API는 실시간만 제공), 교통정보센터 통계는 `cron.sh tportal 30`으로 메꿀 수 있다 — 대시보드는 10분 자료가 없는 날을 그 1시간 평균으로 채운다.
+- 공공데이터포털 인증키: 「대전광역시_대전교통정보 서비스」 활용신청(자동승인) → 마이페이지. Decoding·Encoding 어느 쪽을 넣어도 `collect.mjs`가 처리한다.
+- 링크 확인: `DATA_GO_KR_KEY=... node traffic/collect.mjs --discover` → `traffic/data/discover.json`. 2026.10.22 확인 결과 교량 링크는 `1850012801`(대덕대교네거리→과학공원네거리, 연구단지 방향)·`1850012701`(반대, 둔산 방향), 각 412m. API는 갑천도시고속도로를 "천변도시고속화도로"로 부르고, 만년로는 링크 목록에 없다.
 
 ### 교통정보센터 통계 (교통량 · 통제 전 기준 · 과거 소통)
 
 소통정보 API에는 차량 대수가 없고, 10분 수집도 통제 시작 뒤에 시작했다. 둘 다 대전교통 빅데이터 플랫폼(http://tportal.daejeon.go.kr/)의 통계에서 가져온다. 포털은 로그인·키 없이 쓰지만 공개 API가 아니라 화면이 쓰는 내부 API를 그대로 호출하므로, 사이트가 바뀌면 `collect-tportal.mjs`·`tportal-fetch.js`를 손봐야 한다.
 
-**자동**: `.github/workflows/traffic-tportal.yml`이 매일 06:40 KST에 `node traffic/collect-tportal.mjs`(최근 7일, 어제까지)를 돌려 `history.json`·`volume.json`을 갱신하고 커밋한다. 정부 사이트가 GitHub 러너(해외 IP)를 막으면 이 워크플로는 실패로 끝나고, 그때는 아래 수동 경로를 쓴다. Actions 탭에서 한 번 수동 실행해 통과하는지 확인해 두자.
-
-**수동** (러너에서 막힐 때, 또는 긴 기간을 한 번에 받을 때):
-```
-1. tportal.daejeon.go.kr/analysis/trafficvolume 를 열고 F12 → Console 에 traffic/tportal-fetch.js 내용을 붙여 넣는다.
-   기간은 파일 맨 아래 run('2026-09-01', '어제') — 몇 분 뒤 tportal-export.json 이 내려받아진다.
-2. node traffic/import-tportal.mjs tportal-export.json
-3. traffic/data/history.json, volume.json 커밋.
-```
-로컬 PC가 포털에 닿으면 `node traffic/collect-tportal.mjs --days 30`으로 1·2를 한 번에 할 수도 있다.
-
-**통제 전 기준**은 한 번 만들면 바뀌지 않는다(2026.10.22에 9/28~10/16 평일 14일, 한글날 제외로 계산). 기간을 바꾸려면 `--baseline 2026-09-28~2026-10-16 --exclude 2026-10-09`를 붙여 다시 돌린다. 워크플로 수동 실행의 baseline 입력도 같다.
-
+- `cron.sh tportal`(= `node traffic/collect-tportal.mjs --days 7`)이 전날까지를 받아 `history.json`·`volume.json`을 갱신한다. 날짜별 덮어쓰기라 겹쳐 받아도 된다.
+- 국내 머신이 없을 때의 수동 경로: tportal의 trafficvolume 페이지 콘솔에 `traffic/tportal-fetch.js`를 붙여 넣어 `tportal-export.json`을 받고 `node traffic/import-tportal.mjs tportal-export.json` → 커밋.
+- **통제 전 기준**은 한 번 만들면 바뀌지 않는다(2026.10.22에 9/28~10/16 평일 14일, 한글날 제외로 계산). 기간을 바꾸려면 `node traffic/collect-tportal.mjs --from 2026-09-01 --baseline 2026-09-28~2026-10-16 --exclude 2026-10-09`.
 - 구간 속도: 도로소통정보 > 구간별 통행속도(1시간). 대덕대로 상행(둔산→연구단지)·하행 중 `대덕대교네거리▶과학공원네거리`와 그 앞뒤 구간. 공공데이터포털 API와 같은 교통정보센터 링크 체계라 그대로 이어 붙일 수 있다. 대시보드는 10분 수집이 없는 날을 이 자료로 채우고(10분 수집이 있으면 그쪽 우선), 일별 표에 출처를 적는다.
 - 교통량: 도로-교통량 > VDS(지점별, 1시간). 대덕대교 위에는 VDS가 없어 교량 바로 옆 만년동 쪽 **VDS0016**(상행, 만년네거리▶서구보건소네거리)·**VDS0015**(하행, 대덕대교네거리▶만년상아아파트)를 쓴다. 대전시 「트램구간 일간보고서」 5공구 값과 같은 지점이다. 대덕대교네거리에서 회전해 들어오는 차가 섞이므로 교량 통과량과 완전히 같지는 않다.
 - 통제 전 기준: 기간의 평일(공휴일 제외)·주말을 따로 평균. 요약·일별·시간대 차트는 비교 대상을 "기간 평균"에서 "통제 전"으로 바꾸고, 주말 날짜는 주말 기준과 비교한다. 9/28~10/16 평일 14일: 둔산 방향 38.2 km/h(출근 27.3 / 퇴근 31.3), 연구단지 방향 32.2(출근 29.1 / 퇴근 21.4), 교통량 56,467 대/일.

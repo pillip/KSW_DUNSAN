@@ -15,7 +15,7 @@
     { "key": "daedeokro","label": "대덕대로 (교량 외 구간)", "match": "대덕대로" },
     { "key": "dunsan",   "label": "둔산대로",         "match": "둔산대로" },
     { "key": "expo",     "label": "엑스포로",          "match": "엑스포로" },
-    { "key": "gapcheon", "label": "갑천도시고속도로",  "match": "갑천도시고속|갑천고속" },
+    { "key": "gapcheon", "label": "갑천도시고속도로 (API 명칭 천변도시고속화도로)", "match": "천변도시고속|갑천도시고속|갑천고속" },
     { "key": "daehak",   "label": "대학로",            "match": "대학로" },
     { "key": "mannyeon", "label": "만년로",            "match": "만년로" },
     { "key": "yudeung",  "label": "유등로",            "match": "유등로" },

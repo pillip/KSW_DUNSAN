@@ -1,0 +1,33 @@
+{
+  "_comment": "대전교통정보 서비스 API(getTrafficInfoAll) 응답에서 수집할 링크를 고르는 규칙. 교량 구간은 roadName 이 road 에 맞고 startNodeName·endNodeName 이 모두 match 에 맞는 링크, 우회도로는 roadName 이 match 에 맞는 링크. 처음에는 `node traffic/collect.mjs --discover` (또는 Actions 수동 실행의 discover 옵션)로 traffic/data/discover.json 을 만들어 실제 노드 이름을 확인하고, 자동 매칭이 어긋나면 bridge.linkIds 에 링크 ID를 직접 적는다. linkIds 가 비어 있지 않으면 정규식보다 우선한다.",
+  "bridge": {
+    "label": "대덕대교",
+    "road": "대덕대로",
+    "match": "대덕대교|과학공원",
+    "linkIds": [],
+    "directions": {
+      "toDaedeok": { "label": "연구단지 방향 (만년동→도룡동)", "endMatch": "과학공원|도룡|연구단지|엑스포|유성", "ud": "1" },
+      "toDunsan":  { "label": "둔산 방향 (도룡동→만년동)",   "endMatch": "대덕대교네거리|만년|둔산|정부청사|서구", "ud": "2" }
+    },
+    "_directions_comment": "방향은 endNodeName 이 endMatch 에 맞는지로 먼저 정하고, 둘 다 아니면 udType(ud) 으로 정한다. discover.json 을 보고 ud 값(1 상행/2 하행)이 실제 방향과 반대면 두 값을 서로 바꾼다."
+  },
+  "detours": [
+    { "key": "daedeokro","label": "대덕대로 (교량 외 구간)", "match": "대덕대로" },
+    { "key": "dunsan",   "label": "둔산대로",         "match": "둔산대로" },
+    { "key": "expo",     "label": "엑스포로",          "match": "엑스포로" },
+    { "key": "gapcheon", "label": "갑천도시고속도로 (API 명칭 천변도시고속화도로)", "match": "천변도시고속|갑천도시고속|갑천고속" },
+    { "key": "daehak",   "label": "대학로",            "match": "대학로" },
+    { "key": "mannyeon", "label": "만년로",            "match": "만년로" },
+    { "key": "yudeung",  "label": "유등로",            "match": "유등로" },
+    { "key": "hanbat",   "label": "한밭대로",          "match": "한밭대로" }
+  ],
+  "discoverMatch": "대덕|과학공원|만년|둔산|엑스포|갑천|대학로|유등|도룡|한밭|정부청사|갤러리아|시청",
+  "closure": {
+    "start": "2026-10-19",
+    "end": "2029-05-12",
+    "lanesBefore": 10,
+    "lanesAfter": { "toDaedeok": 3, "toDunsan": 2 },
+    "dailyVolumeBefore": 60000,
+    "note": "대덕대교 구교(1981년 준공, 360m) 철거·신설 — 트램 2호선 통과 구간. 대덕대교네거리(서구 만년동)~과학공원네거리(유성구 도룡동) 왕복 10차로 중 5차로 통제. 연구단지 방향 3차로, 둔산 방향 2차로만 통행."
+  }
+}

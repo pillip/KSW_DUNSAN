@@ -4,7 +4,7 @@
  *
  * 공공데이터포털 「대전광역시_대전교통정보 서비스」(15157924) 의 getTrafficInfoAll 을 호출해
  * 대덕대교 구간과 우회도로의 링크별 통행속도·통행시간·소통등급을 받아 traffic/data/ 에 쌓는다.
- * GitHub Actions 가 10분마다 실행하고 결과를 커밋한다 (.github/workflows/traffic.yml).
+ * 국내 머신의 cron(traffic/cron.sh api)이 10분마다 실행하고 결과를 커밋한다. GitHub 워크플로(traffic.yml)는 수동 실행용.
  *
  *   DATA_GO_KR_KEY=... node traffic/collect.mjs              # 수집 1회
  *   DATA_GO_KR_KEY=... node traffic/collect.mjs --discover   # 링크 목록만 확인 → data/discover.json

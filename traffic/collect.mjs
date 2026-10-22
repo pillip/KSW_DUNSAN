@@ -4,7 +4,7 @@
  *
  * 공공데이터포털 「대전광역시_대전교통정보 서비스」(15157924) 의 getTrafficInfoAll 을 호출해
  * 대덕대교 구간과 우회도로의 링크별 통행속도·통행시간·소통등급을 받아 traffic/data/ 에 쌓는다.
- * GitHub Actions 가 10분마다 실행하고 결과를 커밋한다 (.github/workflows/traffic.yml).
+ * 국내 머신의 cron(traffic/cron.sh api)이 10분마다 실행하고 결과를 커밋한다. GitHub 워크플로(traffic.yml)는 수동 실행용.
  *
  *   DATA_GO_KR_KEY=... node traffic/collect.mjs              # 수집 1회
  *   DATA_GO_KR_KEY=... node traffic/collect.mjs --discover   # 링크 목록만 확인 → data/discover.json
@@ -57,9 +57,9 @@ async function fetchAll(key) {
     const url = `${API}?serviceKey=${encodeURIComponent(key)}&pageNo=${page}&numOfRows=${PAGE}`;
     const r = await fetch(url, { headers: { Accept: 'application/xml, application/json;q=0.9, */*;q=0.5' } });
     const text = await r.text();
-    if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0, 200)}`);
     const { items, totalCnt, error } = parseResponse(text);
     if (error) throw new Error(error);
+    if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0, 200)}`);
     if (Number.isFinite(totalCnt)) total = totalCnt;
     rows.push(...items);
     if (!items.length) break;
@@ -78,7 +78,13 @@ function parseResponse(text) {
   }
   if (/<OpenAPI_ServiceResponse>/.test(t)) {
     const code = tag(t, 'returnReasonCode'), msg = tag(t, 'returnAuthMsg') || tag(t, 'errMsg');
-    return { items: [], error: `공공데이터포털 오류 ${code}: ${msg} (키 미등록·승인 전·트래픽 초과 여부를 확인)` };
+    const hint = {
+      '30': '키가 아직 반영되지 않았거나(활용신청 후 최대 1시간), 이 API(15157924)에 활용신청이 안 돼 있거나, Secret 에 키가 잘못 들어간 경우입니다. 마이페이지 → 활용신청 현황에서 「대전광역시_대전교통정보 서비스」가 승인 상태인지, 키 앞뒤 공백·줄바꿈이 없는지 확인하세요.',
+      '22': '일일 트래픽(개발계정 10,000건)을 넘었습니다.',
+      '31': '활용기간이 만료된 키입니다. 연장 신청이 필요합니다.',
+      '20': '서비스 접근이 거부됐습니다. 활용신청 승인 상태를 확인하세요.',
+    }[code] ?? '';
+    return { items: [], error: `공공데이터포털 오류 ${code}: ${msg}. ${hint}` };
   }
   const rc = tag(t, 'resultCode');
   if (rc && rc !== '00' && rc !== '0' && rc !== '200') return { items: [], error: `API 오류 resultCode=${rc} ${tag(t, 'resultMsg')}` };
@@ -203,9 +209,11 @@ function pruneRaw(today) {
 async function main() {
   if (flag('--rebuild')) { const d = rebuildDaily(); console.log(`daily.json 재계산: ${Object.keys(d.days).length}일`); return; }
 
-  const key = process.env.DATA_GO_KR_KEY;
+  // Decoding 키·Encoding 키 어느 쪽을 넣어도 되게: 이미 퍼센트 인코딩된 키(%2B, %3D 포함)는 한 번 풀어서 쓴다.
+  let key = (process.env.DATA_GO_KR_KEY ?? '').trim();
+  if (/%[0-9A-Fa-f]{2}/.test(key)) { try { key = decodeURIComponent(key); } catch {} }
   let all;
-  if (opt('--from-file')) all = parseResponse(readFileSync(opt('--from-file'), 'utf8')).items;
+  if (opt('--from-file')) { const pr = parseResponse(readFileSync(opt('--from-file'), 'utf8')); if (pr.error) throw new Error(pr.error); all = pr.items; }
   else {
     if (!key) { console.error('DATA_GO_KR_KEY 환경변수가 없습니다. 공공데이터포털에서 「대전광역시_대전교통정보 서비스」 활용신청(자동승인) 후 인증키를 넣어 주세요.'); process.exit(2); }
     all = await fetchAll(key);
