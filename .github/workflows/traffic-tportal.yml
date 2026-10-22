@@ -1,0 +1,53 @@
+name: traffic tportal
+
+# 대전교통 빅데이터 플랫폼(tportal.daejeon.go.kr)에서 전날까지의 구간 속도·VDS 교통량을 받아
+# traffic/data/history.json · volume.json 을 갱신한다. 매일 아침 06:40 KST.
+# 정부 사이트가 GitHub 러너(해외 IP)를 막으면 실패로 끝난다 — 그 경우 traffic/tportal-fetch.js 로 브라우저에서 받아 넣는다.
+
+on:
+  schedule:
+    - cron: '40 21 * * *'   # 06:40 KST
+  workflow_dispatch:
+    inputs:
+      days:
+        description: '며칠치를 받을지 (어제까지)'
+        default: '7'
+      baseline:
+        description: '통제 전 기준을 다시 계산할 기간 (예: 2026-09-28~2026-10-16). 비우면 기존 기준 유지'
+        default: ''
+      exclude:
+        description: '기준 계산에서 뺄 날짜 (쉼표 구분, 예: 2026-10-09)'
+        default: '2026-10-09'
+
+concurrency:
+  group: traffic-collect
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tportal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 교통정보센터 통계 수집
+        run: |
+          ARGS="--days ${{ inputs.days || '7' }}"
+          if [ -n "${{ inputs.baseline }}" ]; then ARGS="$ARGS --baseline ${{ inputs.baseline }} --exclude ${{ inputs.exclude }}"; fi
+          node traffic/collect-tportal.mjs $ARGS
+      - name: 커밋
+        run: |
+          git config user.name "traffic-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add traffic/data
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -m "traffic: $(TZ=Asia/Seoul date '+%Y-%m-%d') 교통정보센터 통계 [skip ci]"
+          for i in 1 2 3; do
+            git push && break
+            git pull --rebase -X theirs || true
+          done
