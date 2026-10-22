@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>대덕대교 통행 모니터</title>
+<meta name="description" content="트램 2호선 공사로 2026.10.19부터 2029.5.12까지 5차로가 통제된 대덕대교의 통행속도·통행시간·혼잡도를 10분 단위로 기록하고 일별·시간대별로 보여줍니다. 우회도로 소통과 교통량도 함께 봅니다.">
+<link rel="canonical" href="https://pillip.github.io/KSW_DUNSAN/traffic.html">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#1e4fd0">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:site_name" content="둔산 재건축 트래커">
+<meta property="og:title" content="대덕대교 통행 모니터 — 트램 공사 부분통제 기간의 소통 기록">
+<meta property="og:description" content="대덕대교 5차로 통제(2026.10.19~2029.5.12) 기간의 통행속도·통행시간·혼잡도를 매일 기록합니다. 출퇴근 피크, 우회도로, 교통량.">
+<meta property="og:url" content="https://pillip.github.io/KSW_DUNSAN/traffic.html">
+<meta property="og:image" content="https://pillip.github.io/KSW_DUNSAN/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* 둔산 재건축 트래커와 같은 토큰. 차트 색은 dataviz 기준 팔레트(검증 완료): 둔산 방향 = 파랑, 연구단지 방향 = 주황, 기준(통제 전) = 청록. */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --surface-2:#eaedea; --fg:#1b2230; --muted:#5d6675; --line:#d8dde2;
+  --accent:#1e4fd0; --accent-soft:#e2e8fb;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --ctx:#9aa3ae; --ctx2:#c3c9d1;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --heat-1:#cde2fb; --heat-2:#9ec5f4; --heat-3:#6da7ec; --heat-4:#3987e5; --heat-5:#256abf; --heat-6:#184f95; --heat-7:#0d366b;
+  --font-sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --font-mono:"IBM Plex Mono","SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1317; --surface:#171c22; --surface-2:#1f262e; --fg:#e7eaee; --muted:#9ba5b2; --line:#2b333d;
+    --accent:#7d9dff; --accent-soft:#1c2742;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --ctx:#6e7887; --ctx2:#4a535f;
+    --heat-1:#163a66; --heat-2:#1c4d85; --heat-3:#2460a6; --heat-4:#2f74c6; --heat-5:#4a8ee0; --heat-6:#7fb0ee; --heat-7:#b7d3f6;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-sans);line-height:1.55;font-size:15px;-webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1160px;margin:0 auto;padding:0 16px}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+.nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.nav .wrap{display:flex;align-items:center;gap:22px;height:56px}
+.nav .brand{display:flex;align-items:center;gap:10px;font-weight:700;color:var(--fg);white-space:nowrap}
+.nav ul{display:flex;gap:16px;list-style:none;margin:0;padding:0;overflow-x:auto;scrollbar-width:none}
+.nav ul::-webkit-scrollbar{display:none}
+.nav li a{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.nav .upd{margin-left:auto;font-size:.78rem;color:var(--muted);white-space:nowrap}
+@media (max-width:760px){.nav .upd{display:none}}
+
+.hero{padding:36px 0 20px}
+.hero h1{font-size:clamp(1.6rem,3.4vw,2.2rem);line-height:1.2;margin:8px 0 0;letter-spacing:-.01em}
+.hero .lead{color:var(--muted);max-width:68ch;margin-top:12px;font-size:1.02rem}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:18px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.fact .v{font-size:1.35rem;font-weight:600;letter-spacing:-.01em}
+.fact .v small{font-size:.8rem;font-weight:500;color:var(--muted);margin-left:3px}
+.fact .l{font-size:.76rem;color:var(--muted);margin-top:2px}
+
+.status{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:.82rem;color:var(--muted);padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface);margin-top:18px}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block;margin-right:6px;vertical-align:middle}
+.status.stale .dot{background:var(--warn)}
+.status.off .dot{background:var(--crit)}
+
+.filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:26px 0 14px}
+.filters .lbl{font-size:.8rem;color:var(--muted);margin-right:-4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);max-width:100%;overflow-x:auto;scrollbar-width:none}
+.seg::-webkit-scrollbar{display:none}
+.seg button{font:inherit;font-size:.82rem;padding:7px 12px;border:0;background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;flex:none}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.is-on{background:var(--accent-soft);color:var(--fg);font-weight:600}
+.seg button:hover:not(.is-on){background:var(--surface-2)}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:860px){.grid2{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;min-width:0;position:relative}
+.card h2,.card h3{margin:0;font-size:1.02rem;font-weight:600}
+.card .sub{color:var(--muted);font-size:.84rem;margin-top:3px}
+.card-h{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.card-h .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font:inherit;font-size:.78rem;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer}
+.btn.is-on{background:var(--accent-soft);color:var(--fg);border-color:var(--accent)}
+.sec-h{margin:34px 0 12px}
+.sec-h h2{margin:0;font-size:1.25rem;letter-spacing:-.01em}
+.sec-h p{color:var(--muted);font-size:.92rem;max-width:72ch;margin:4px 0 0}
+
+/* 방향 요약 카드 */
+.dir{border-top:3px solid var(--dc)}
+.dir .head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.dir .key{width:14px;height:3px;border-radius:2px;background:var(--dc);display:inline-block;vertical-align:middle;margin-right:6px}
+.dir .lanes{font-size:.78rem;color:var(--muted)}
+.hero-n{display:flex;align-items:baseline;gap:8px;margin-top:10px;flex-wrap:wrap}
+.hero-d{margin-top:4px;font-size:.84rem}
+.hero-n .v{font-size:2.6rem;font-weight:600;letter-spacing:-.02em;line-height:1}
+.hero-n .u{color:var(--muted);font-size:.9rem}
+.hero-n .u{flex:1 1 auto}
+.delta.down{color:var(--crit)}.delta.up{color:var(--good)}.delta.flat{color:var(--muted)}
+@media (prefers-color-scheme: dark){.delta.down{color:#e66767}}
+.kv{display:grid;grid-template-columns:1fr auto auto;gap:6px 14px;margin-top:14px;font-size:.88rem}
+.kv .k{color:var(--muted)}
+.kv .v{text-align:right}
+.kv .d{text-align:right;font-size:.8rem}
+.spark{margin-top:12px;display:block;width:100%;height:46px}
+.spark-l{font-size:.74rem;color:var(--muted);margin-top:2px}
+
+/* 차트 */
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .ax{fill:var(--muted);font-size:11px;font-family:var(--font-mono)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .band{fill:var(--surface-2)}
+.chart .xh{stroke:var(--muted);stroke-width:1;opacity:0}
+.chart .pt{opacity:0}
+.chart.is-hover .xh,.chart.is-hover .pt{opacity:1}
+.chart .ref{stroke:var(--s3);stroke-width:1.5;stroke-dasharray:4 4}
+.chart .reflbl{fill:var(--muted);font-size:11px}
+.chart .wk{fill:var(--surface-2)}
+.tip{position:absolute;pointer-events:none;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.14);padding:8px 10px;font-size:.8rem;min-width:150px;display:none}
+.tip .t{color:var(--muted);margin-bottom:4px;font-size:.76rem}
+.tip .r{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.tip .r .k{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.tip .r .k i{width:12px;height:2px;display:inline-block;border-radius:1px}
+.tip .r b{font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:2px;border-radius:1px;display:inline-block}
+.legend i.dash{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 7px)}
+.legend i.sq{width:11px;height:11px;border-radius:2px}
+.tbl{display:none;margin-top:12px;overflow-x:auto}
+.tbl.is-on{display:block}
+table{border-collapse:collapse;width:100%;font-size:.84rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--muted);font-size:.76rem;background:var(--surface-2)}
+tbody tr:hover{background:var(--surface-2)}
+.ramp{display:flex;align-items:center;gap:8px;font-size:.76rem;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+.ramp .cells{display:inline-flex;gap:2px}
+.ramp .cells i{width:22px;height:12px;border-radius:2px;display:inline-block}
+.heat{display:grid;gap:2px;margin-top:6px}
+.heat .hl{font-size:11px;color:var(--muted);font-family:var(--font-mono);text-align:center;align-self:end}
+.heat .rl{font-size:11px;color:var(--muted);font-family:var(--font-mono);display:flex;align-items:center;justify-content:flex-end;padding-right:6px;white-space:nowrap}
+.heat .rl.we{color:var(--fg);font-weight:600}
+.heat .c{aspect-ratio:2.6/1;border-radius:2px;min-width:0;cursor:default;position:relative}
+.heat .c.na{background:var(--surface-2)}
+.heat .c:hover,.heat .c:focus-visible{outline:2px solid var(--fg);outline-offset:-1px}
+.empty{padding:36px 18px;text-align:center;color:var(--muted);font-size:.9rem}
+@media (max-width:760px){.heat .c{aspect-ratio:1/1}.heat{grid-template-columns:50px repeat(24,1fr)!important}.heat .rl{font-size:10px;padding-right:4px}.card-h .tools{width:100%}}
+
+/* 우회도로 표 */
+.det td.sp svg{display:block;width:110px;height:24px}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:1px 9px;font-size:.76rem;font-weight:600;white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.pill.c1{background:color-mix(in srgb,var(--good) 14%,transparent)}.pill.c1 i{background:var(--good)}
+.pill.c2{background:color-mix(in srgb,var(--warn) 22%,transparent)}.pill.c2 i{background:var(--warn)}
+.pill.c3{background:color-mix(in srgb,var(--crit) 14%,transparent)}.pill.c3 i{background:var(--crit)}
+.pill.c0{background:var(--surface-2);color:var(--muted)}.pill.c0 i{background:var(--ctx)}
+
+/* 실시간 */
+.live{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.lk{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg)}
+.lk .n{font-size:.86rem;font-weight:600}
+.lk .m{display:flex;gap:14px;align-items:baseline;margin-top:6px;flex-wrap:wrap}
+.lk .m b{font-size:1.4rem;font-weight:600;letter-spacing:-.01em}
+.lk .m small{color:var(--muted);font-size:.78rem}
+
+/* 안내·설정 */
+.setup{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:18px}
+.method code{font-family:var(--font-mono);font-size:.82em;background:var(--surface-2);padding:1px 6px;border-radius:5px}
+.method{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.method h3{font-size:.95rem;margin:0 0 6px}
+.method p,.method li{font-size:.88rem;color:var(--muted);margin:0}
+.method ul{margin:6px 0 0;padding-left:18px}
+.note{font-size:.8rem;color:var(--muted);margin-top:8px}
+footer{border-top:1px solid var(--line);padding-block:24px 48px;font-size:.8rem;color:var(--muted);margin-top:40px}
+footer p+p{margin-top:6px}
+.loading .card,.loading .dir{opacity:.55;transition:opacity .2s}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<a class="sr" href="#main">본문으로</a>
+<nav class="nav" aria-label="주요 메뉴">
+  <div class="wrap">
+    <a class="brand" href="#main"><img src="assets/logo.svg" width="26" height="26" alt="">대덕대교 통행 모니터</a>
+    <ul>
+      <li><a href="#summary">방향별 요약</a></li>
+      <li><a href="#daily">일별 추이</a></li>
+      <li><a href="#hourly">시간대</a></li>
+      <li><a href="#detour">우회도로</a></li>
+      <li><a href="#volume">교통량</a></li>
+      <li><a href="#live">지금</a></li>
+      <li><a href="#method">자료·방법</a></li>
+      <li><a href="index.html">둔산 재건축 트래커 →</a></li>
+    </ul>
+    <span class="upd" id="upd"></span>
+  </div>
+</nav>
+
+<main id="main" class="wrap">
+<section class="hero">
+  <div class="eyebrow">트램 2호선 공사 · 대덕대교 부분통제</div>
+  <h1>대덕대교, 오늘은 얼마나 막혔나</h1>
+  <p class="lead">대덕대교네거리(만년동)~과학공원네거리(도룡동) 구간은 2026년 10월 19일부터 2029년 5월 12일까지 왕복 10차로 중 5차로가 통제됩니다. 이 페이지는 대전시 교통정보 API로 10분마다 통행속도·통행시간·소통등급을 기록해 날마다, 시간대마다 어떻게 달라지는지 보여줍니다.</p>
+  <div class="facts" id="facts"></div>
+  <div class="status" id="status"><span><span class="dot"></span><span id="st-main">자료를 불러오는 중…</span></span><span id="st-sub"></span></div>
+</section>
+
+<div id="setup" class="setup" hidden>
+  <p class="note" style="margin:0">수집된 소통 자료가 아직 없습니다. 자료가 쌓이면 방향별 요약과 일별·시간대별 차트가 여기에 표시됩니다.</p>
+  <p class="note" id="setup-err" style="margin:6px 0 0"></p>
+</div>
+
+<div id="body" hidden>
+<div class="filters" role="group" aria-label="기간과 방향 선택">
+  <span class="lbl">기간</span>
+  <div class="seg" id="f-range">
+    <button data-v="7">7일</button><button data-v="14" class="is-on">14일</button><button data-v="30">30일</button><button data-v="0">전체</button>
+  </div>
+  <span class="lbl">방향</span>
+  <div class="seg" id="f-dir">
+    <button data-v="both" class="is-on">양방향</button><button data-v="toDunsan">둔산 방향</button><button data-v="toDaedeok">연구단지 방향</button>
+  </div>
+  <span class="lbl" id="f-note"></span>
+</div>
+
+<section id="summary" class="grid2" aria-label="방향별 요약"></section>
+
+<section id="daily">
+  <div class="card" style="margin-top:14px">
+    <div class="card-h">
+      <div><h2>일별 추이</h2><div class="sub" id="daily-sub">하루 평균 통행속도 (km/h). 주말은 회색 띠.</div></div>
+      <div class="tools">
+        <div class="seg" id="m-daily">
+          <button data-v="spd" class="is-on">하루 평균</button><button data-v="am">출근 7–9시</button><button data-v="pm">퇴근 17–19시</button><button data-v="tt">통행시간</button><button data-v="cg">혼잡 비율</button>
+        </div>
+        <button class="btn tbl-btn" data-for="daily-tbl">표</button>
+      </div>
+    </div>
+    <div class="chart" id="c-daily"></div>
+    <div class="legend" id="l-daily"></div>
+    <div class="tbl" id="daily-tbl"></div>
+  </div>
+</section>
+
+<section id="hourly" style="margin-top:14px">
+  <div class="card">
+    <div class="card-h">
+      <div><h2>시간대별 속도</h2><div class="sub" id="hourly-sub">오늘과 기간 평균의 24시간 프로필. 띠는 출근·퇴근 피크.</div></div>
+      <div class="tools"><button class="btn tbl-btn" data-for="hourly-tbl">표</button></div>
+    </div>
+    <div class="chart" id="c-hourly"></div>
+    <div class="legend" id="l-hourly"></div>
+    <div class="tbl" id="hourly-tbl"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-h">
+      <div><h2>일자 × 시간대</h2><div class="sub">진할수록 느림. 어느 요일, 어느 시간대가 가장 막히는지 한눈에.</div></div>
+      <div class="tools"><button class="btn tbl-btn" data-for="heat-tbl">표</button></div>
+    </div>
+    <div id="c-heat"></div>
+    <div class="ramp" id="heat-ramp"></div>
+    <div class="tbl" id="heat-tbl"></div>
+  </div>
+</section>
+
+<section id="detour">
+  <div class="sec-h"><h2>우회도로는 괜찮은가</h2><p>대전시가 안내한 우회로(둔산대로·엑스포로·갑천도시고속도로·대학로·만년로·유등로)와 대덕대로 접근 구간의 평균 통행속도. 통제가 교량 밖으로 얼마나 번지는지 봅니다.</p></div>
+  <div class="card">
+    <div class="tbl is-on det" id="detour-tbl" style="margin-top:0"></div>
+  </div>
+</section>
+
+<section id="volume">
+  <div class="sec-h"><h2>교통량</h2><p>통제 전 대덕대교는 하루 약 6만 대가 지났습니다(대전일보, 2026.10). 소통정보 API는 차량 대수를 주지 않으므로, 교통량은 대전교통정보센터 통계(tportal.daejeon.go.kr → 교통데이터 통계분석 → 도로-교통량)에서 내려받아 <code>traffic/import-volume.mjs</code>로 넣으면 여기에 표시됩니다.</p></div>
+  <div class="card" id="volume-card">
+    <div class="card-h">
+      <div><h2 id="vol-title">일별 교통량</h2><div class="sub" id="vol-sub"></div></div>
+      <div class="tools"><button class="btn tbl-btn" data-for="vol-tbl">표</button></div>
+    </div>
+    <div class="chart" id="c-vol"></div>
+    <div class="legend" id="l-vol"></div>
+    <div class="tbl" id="vol-tbl"></div>
+  </div>
+</section>
+
+<section id="live">
+  <div class="sec-h"><h2>지금</h2><p id="live-sub">마지막 수집 시점의 링크별 현재값. 5분마다 새로 읽습니다.</p></div>
+  <div class="live" id="live-grid"></div>
+</section>
+
+<section id="method">
+  <div class="sec-h"><h2>자료와 방법</h2></div>
+  <div class="method">
+    <div class="card">
+      <h3>어디서 오는 자료인가</h3>
+      <p>공공데이터포털 「대전광역시_대전교통정보 서비스」(대전광역시 공공교통정책과) <code>getTrafficInfoAll</code>. 대전시 교통정보센터가 산출하는 링크(교차로 사이 구간)별 통행속도(km/h)·통행시간(초)·소통등급을 실시간으로 제공합니다. GitHub Actions가 10분마다 호출해 대덕대로 교량 구간과 우회도로 링크만 골라 저장합니다.</p>
+    </div>
+    <div class="card">
+      <h3>어떻게 집계하나</h3>
+      <ul>
+        <li>교량 구간: 대덕대교네거리↔과학공원네거리 사이 링크. 방향별로 속도는 평균, 통행시간은 링크 합.</li>
+        <li>하루 평균은 유효 표본(속도 &gt; 0)의 단순 평균, 피크는 07–09시·17–19시 표본 평균.</li>
+        <li>혼잡 비율 = 소통등급이 서행·정체(2·3)인 표본의 비율.</li>
+        <li>우회도로는 도로명이 같은 모든 링크의 속도 평균(양방향).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>한계</h3>
+      <ul>
+        <li>소통정보는 <b>속도·시간</b>이지 <b>교통량(대수)</b>이 아닙니다. 대수는 교통정보센터 통계를 따로 넣어야 합니다.</li>
+        <li>수집은 통제 시작 뒤에 시작했으므로 "통제 전" 기준은 교통정보센터의 과거 통계를 <code>baseline.json</code>으로 넣어야 비교할 수 있습니다. 넣기 전까지는 기간 평균과 비교합니다.</li>
+        <li>10분 간격 표본이라 짧은 정체는 빠질 수 있고, API 장애 시 결측이 생깁니다. 표본 수를 함께 표시합니다.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>대덕대교 통행 모니터는 대전광역시 교통정보 공개 API와 보도자료를 바탕으로 만든 안내 페이지입니다. 대전광역시·대전시의회의 공식 통계가 아니며, 공식 수치는 대전교통정보센터(traffic.daejeon.go.kr)와 교통데이터 통계분석(tportal.daejeon.go.kr)을 확인하세요.</p>
+    <p>통제 정보: 대전광역시 보도자료(2026.10), 대전일보·경향신문·세계일보 보도. 자료와 코드: <a href="https://github.com/pillip/KSW_DUNSAN" target="_blank" rel="noopener">GitHub</a> · <a href="index.html">둔산 재건축 트래커</a> · 의정활동용 <a href="audit.html">행정사무감사 질의 도우미</a></p>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+
+<script>
+/* ============ 상태·유틸 ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v); } for (const k of kids) if (k != null) e.append(k); return e; };
+const svgNS = 'http://www.w3.org/2000/svg';
+const S = (tag, attrs = {}) => { const e = document.createElementNS(svgNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
+const f1 = v => v == null ? '–' : (Math.round(v * 10) / 10).toLocaleString('ko-KR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const f0 = v => v == null ? '–' : Math.round(v).toLocaleString('ko-KR');
+const pct = v => v == null ? '–' : Math.round(v * 100) + '%';
+const fTt = s => { if (s == null) return '–'; const r = Math.round(s); return r >= 60 ? `${Math.floor(r / 60)}분 ${String(r % 60).padStart(2, '0')}초` : `${r}초`; };
+const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const dow = d => new Date(d + 'T00:00:00+09:00').getDay();
+const isWe = d => { const w = dow(d); return w === 0 || w === 6; };
+const md = d => `${+d.slice(5, 7)}/${+d.slice(8, 10)}`;
+const mdw = d => `${md(d)}(${WD[dow(d)]})`;
+const kstToday = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10);
+const DIR = { toDunsan: { label: '둔산 방향', long: '둔산 방향 (도룡동→만년동)', color: 'var(--s1)', lanes: 2 }, toDaedeok: { label: '연구단지 방향', long: '연구단지 방향 (만년동→도룡동)', color: 'var(--s2)', lanes: 3 } };
+const METRIC = { spd: { label: '하루 평균 속도', unit: 'km/h', fmt: f1, lower: 'worse' }, am: { label: '출근 피크(7–9시) 속도', unit: 'km/h', fmt: f1, lower: 'worse' }, pm: { label: '퇴근 피크(17–19시) 속도', unit: 'km/h', fmt: f1, lower: 'worse' }, tt: { label: '교량 통행시간', unit: '초', fmt: v => v == null ? '–' : fTt(v), lower: 'better' }, cg: { label: '혼잡(서행·정체) 비율', unit: '%', fmt: pct, lower: 'better' } };
+
+const state = { range: 14, dir: 'both', metric: 'spd', daily: null, latest: null, volume: null, baseline: null };
+const bust = () => '?t=' + Math.floor(Date.now() / 300000); // 5분 캐시 단위
+async function getJson(p, optional) {
+  try { const r = await fetch(p + bust(), { cache: 'no-cache' }); if (!r.ok) { if (optional) return null; throw new Error(`${p} ${r.status}`); } return await r.json(); }
+  catch (e) { if (optional) return null; throw e; }
+}
+
+/* ============ 데이터 선택 ============ */
+function days() { return Object.keys(state.daily?.days ?? {}).sort(); }
+function rangeDays() { const d = days(); return state.range ? d.slice(-state.range) : d; }
+function g(d, grp) { return state.daily.days[d]?.[grp] ?? null; }
+function dirs() { return state.dir === 'both' ? ['toDunsan', 'toDaedeok'] : [state.dir]; }
+const mean = a => { const b = a.filter(v => v != null && !Number.isNaN(v)); return b.length ? b.reduce((s, v) => s + v, 0) / b.length : null; };
+function periodAvg(grp, key, exclude) { return mean(rangeDays().filter(d => d !== exclude).map(d => g(d, grp)?.[key])); }
+function hourlyAvg(grp, dayFilter) { const ds = rangeDays().filter(dayFilter); return Array.from({ length: 24 }, (_, h) => mean(ds.map(d => g(d, grp)?.h?.[h]))); }
+function latestDay() { const d = days(); return d[d.length - 1]; }
+
+/* ============ 오늘(부분 집계) 비교 ============ */
+/** 마지막 수집일이 오늘이고 아직 하루가 끝나지 않았으면, 비교는 같은 시간대(0시~마지막 시)끼리 한다. */
+function todayInfo() {
+  const d = latestDay(); let last = -1;
+  for (const k of ['toDunsan', 'toDaedeok']) (g(d, `bridge:${k}`)?.h ?? []).forEach((v, i) => { if (v != null && i > last) last = i; });
+  return { d, partial: d === kstToday() && last < 23, last };
+}
+const hoursMean = (arr, upto) => mean((arr ?? []).slice(0, upto + 1));
+/** 그룹·지표의 {v: 오늘값, ref: 비교값, base: 통제 전 기준 사용 여부} */
+function cmpVal(grp, key, T) {
+  const t = g(T.d, grp); if (!t) return { v: null, ref: null };
+  const base = state.baseline?.groups?.[grp];
+  if (!T.partial) return { v: t[key], ref: base?.[key] ?? periodAvg(grp, key, T.d), base: base?.[key] != null };
+  const hk = { spd: 'h', tt: 'tth', cg: 'cgh' }[key];
+  if (hk) {
+    const v = hoursMean(t[hk], T.last);
+    const ref = base?.[hk] ? hoursMean(base[hk], T.last) : mean(rangeDays().filter(d => d !== T.d).map(d => hoursMean(g(d, grp)?.[hk], T.last)));
+    return { v, ref, base: !!base?.[hk] };
+  }
+  const P = state.daily.peak ?? { am: [7, 9], pm: [17, 19] };
+  if (key === 'am' || key === 'pm') return T.last >= P[key][1] - 1 ? { v: t[key], ref: base?.[key] ?? periodAvg(grp, key, T.d), base: base?.[key] != null } : { v: null, ref: null, pending: T.last >= P[key][0] };
+  return { v: t[key], ref: null };
+}
+
+/* ============ 렌더: 상단 ============ */
+function renderFacts() {
+  const c = state.daily?.closure ?? { start: '2026-10-19', end: '2029-05-12' };
+  const today = kstToday();
+  const dayN = Math.floor((new Date(today) - new Date(c.start)) / 864e5) + 1;
+  const left = Math.ceil((new Date(c.end) - new Date(today)) / 864e5);
+  const months = Math.round((new Date(c.end) - new Date(c.start)) / (864e5 * 30.44));
+  $('#facts').replaceChildren(
+    fact(`D+${dayN}`, '', `통제 ${dayN}일째 (${md(c.start)} 시작)`),
+    fact(f0(left), '일', `해제까지 (${c.end.replace(/-/g, '.')} 예정, 약 ${months}개월)`),
+    fact('10 → 5', '차로', '연구단지 방향 3차로 · 둔산 방향 2차로'),
+    fact(c.dailyVolumeBefore ? '약 ' + Math.round(c.dailyVolumeBefore / 1e4) + '만' : '약 6만', '대/일', '통제 전 하루 교통량 (대전일보)'),
+  );
+}
+function fact(v, u, l) { return el('div', { class: 'fact' }, el('div', { class: 'v' }, document.createTextNode(v), u ? el('small', { text: u }) : null), el('div', { class: 'l', text: l })); }
+
+function renderStatus() {
+  const st = $('#status'); st.classList.remove('stale', 'off');
+  const t = state.latest?.t ?? state.daily?.updated;
+  if (!t) { $('#st-main').textContent = '수집 자료 없음'; st.classList.add('off'); return; }
+  const ageMin = Math.round((Date.now() - new Date(t)) / 6e4);
+  const d = days(); const today = kstToday(); const n = Object.values(state.daily?.days?.[today] ?? {})[0]?.n;
+  $('#st-main').textContent = `마지막 수집 ${t.slice(5, 16).replace('T', ' ')} (${ageMin < 60 ? ageMin + '분 전' : Math.round(ageMin / 60) + '시간 전'})`;
+  $('#st-sub').textContent = `수집 ${d.length}일 (${d[0] ? md(d[0]) : ''}~) · 오늘 표본 ${n ?? 0}회 · 10분 간격`;
+  if (ageMin > 40) st.classList.add(ageMin > 180 ? 'off' : 'stale');
+  $('#upd').textContent = `갱신 ${t.slice(5, 16).replace('T', ' ')}`;
+}
+
+/* ============ 렌더: 방향 요약 ============ */
+function renderSummary() {
+  const T = todayInfo(), today = T.d;
+  const wrap = $('#summary'); wrap.replaceChildren();
+  for (const k of ['toDunsan', 'toDaedeok']) {
+    const grp = `bridge:${k}`, D = DIR[k], t = g(today, grp);
+    const card = el('div', { class: 'card dir', style: `--dc:${D.color}` });
+    card.append(el('div', { class: 'head' }, el('h2', {}, el('i', { class: 'key' }), document.createTextNode(D.long)), el('span', { class: 'lanes', text: `${D.lanes}차로 통행` })));
+    if (!t) { card.append(el('div', { class: 'empty', text: '오늘 자료가 아직 없습니다.' })); wrap.append(card); continue; }
+    const c = cmpVal(grp, 'spd', T), cmpLbl = c.base ? '통제 전 대비' : T.partial ? '같은 시간대 기간 평균 대비' : '기간 평균 대비';
+    card.append(el('div', { class: 'hero-n' }, el('span', { class: 'v', text: f1(c.v) }), el('span', { class: 'u', text: `km/h · ${mdw(today)} ${T.partial ? `0–${T.last}시` : '하루'} 평균` })), el('div', { class: 'hero-d' }, delta(c.v, c.ref, 'worse', cmpLbl)));
+    const kv = el('div', { class: 'kv' });
+    for (const [key, lbl] of [['am', '출근 7–9시'], ['pm', '퇴근 17–19시'], ['min', '최저 속도'], ['tt', '교량 통행시간'], ['cg', '혼잡 비율']]) {
+      const m = key === 'min' ? { fmt: f1, unit: 'km/h', lower: 'worse' } : METRIC[key];
+      const r = cmpVal(grp, key, T);
+      const vTxt = r.v == null ? (r.pending ? '진행 중' : '–') : m.fmt(r.v) + (key === 'tt' || key === 'cg' ? '' : ' ' + m.unit);
+      const rl = r.base ? '통제 전 대비' : T.partial && key !== 'am' && key !== 'pm' ? '같은 시간대 기간 평균 대비' : '기간 평균 대비';
+      kv.append(el('span', { class: 'k', text: lbl }), el('span', { class: 'v num', text: vTxt }), delta(r.v, r.ref, m.lower, rl, true, key === 'cg' ? 'pp' : null));
+    }
+    card.append(kv);
+    const vals = rangeDays().map(d => ({ x: d, y: g(d, grp)?.spd ?? null }));
+    card.append(spark(vals, D.color, T.partial), el('div', { class: 'spark-l', text: `최근 ${vals.length}일 하루 평균 속도${T.partial ? ' (오늘은 진행 중)' : ''} · 오늘 표본 ${t.n}회` }));
+    wrap.append(card);
+  }
+}
+function delta(v, ref, lower, lbl, small, kind) {
+  if (v == null || ref == null) return el('span', { class: 'd delta flat', text: small ? '' : `${lbl} 자료 없음` });
+  const diff = v - ref;
+  const rel = kind === 'pp' ? diff : (ref ? diff / ref : 0);
+  const worse = lower === 'worse' ? diff < 0 : diff > 0;
+  const cls = Math.abs(rel) < 0.02 ? 'flat' : worse ? 'down' : 'up';
+  const arrow = cls === 'flat' ? '→' : diff < 0 ? '▼' : '▲';
+  const txt = `${arrow} ${Math.round(Math.abs(rel) * 100)}${kind === 'pp' ? '%p' : '%'}`;
+  return el('span', { class: `d delta ${cls}`, title: lbl, text: small ? txt : `${txt} ${lbl}` });
+}
+function spark(vals, color, partial) {
+  const W = 300, H = 46, p = 3; const ys = vals.map(v => v.y).filter(v => v != null);
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, class: 'spark', role: 'img', 'aria-label': '하루 평균 속도 추이' });
+  if (ys.length < 2) return svg;
+  const lo = Math.min(...ys) * 0.9, hi = Math.max(...ys) * 1.05;
+  const x = i => p + i * (W - 2 * p) / Math.max(1, vals.length - 1), y = v => H - p - (v - lo) / (hi - lo || 1) * (H - 2 * p);
+  let d = ''; vals.forEach((v, i) => { if (v.y == null) return; d += (d ? ' L' : 'M') + x(i).toFixed(1) + ' ' + y(v.y).toFixed(1); });
+  svg.append(S('path', { d, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  const last = [...vals].reverse().find(v => v.y != null); const li = vals.lastIndexOf(last);
+  const hollow = partial && li === vals.length - 1;
+  svg.append(S('circle', { cx: x(li), cy: y(last.y), r: 4, fill: hollow ? 'var(--surface)' : color, stroke: hollow ? color : 'var(--surface)', 'stroke-width': 2 }));
+  return svg;
+}
+
+/* ============ 차트 공통: 선 차트 + 크로스헤어 ============ */
+/** opts: {xs:[...labels], series:[{label,color,vals:[y|null],dash?}], yFmt, unit, bands:[{from,to,label}] (x 인덱스), weekend:bool, ref:{y,label}, yMin0:bool} */
+function lineChart(host, o) {
+  host.replaceChildren(); host.classList.remove('is-hover');
+  const W = Math.max(320, host.clientWidth || 640), H = 260, m = { t: 16, r: 14, b: 30, l: 44 };
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': o.aria ?? '' });
+  const n = o.xs.length; if (!n) { host.append(el('div', { class: 'empty', text: '표시할 자료가 없습니다.' })); return; }
+  const all = o.series.flatMap(s => s.vals).filter(v => v != null).concat(o.ref?.y != null ? [o.ref.y] : []);
+  if (!all.length) { host.append(el('div', { class: 'empty', text: '표시할 자료가 없습니다.' })); return; }
+  let lo = o.yMin0 ? 0 : Math.min(...all), hi = Math.max(...all); if (hi === lo) { hi += 1; lo = Math.max(0, lo - 1); }
+  const pad = (hi - lo) * 0.12; lo = o.yMin0 ? 0 : Math.max(0, lo - pad); hi += pad;
+  const x = i => m.l + (n === 1 ? (W - m.l - m.r) / 2 : i * (W - m.l - m.r) / (n - 1));
+  const y = v => m.t + (H - m.t - m.b) * (1 - (v - lo) / (hi - lo));
+  const slot = n > 1 ? (W - m.l - m.r) / (n - 1) : W - m.l - m.r;
+  // 주말 띠 / 피크 띠
+  if (o.weekend) o.xs.forEach((d, i) => { if (isWe(d)) svg.append(S('rect', { class: 'wk', x: x(i) - slot / 2, y: m.t, width: slot, height: H - m.t - m.b })); });
+  for (const b of o.bands ?? []) { svg.append(S('rect', { class: 'band', x: x(b.from) - slot / 2, y: m.t, width: x(b.to) - x(b.from) + slot, height: H - m.t - m.b })); const t = S('text', { class: 'ax', x: (x(b.from) + x(b.to)) / 2, y: m.t + 12, 'text-anchor': 'middle' }); t.textContent = b.label; svg.append(t); }
+  // 그리드·축
+  const ticks = niceTicks(lo, hi, 4);
+  for (const tv of ticks) { svg.append(S('line', { class: 'grid', x1: m.l, x2: W - m.r, y1: y(tv), y2: y(tv) })); const t = S('text', { class: 'ax', x: m.l - 6, y: y(tv) + 4, 'text-anchor': 'end' }); t.textContent = (o.yTick ?? o.yFmt)(tv); svg.append(t); }
+  const step = Math.ceil(n / Math.max(3, Math.floor((W - m.l - m.r) / 56)));
+  const lblIdx = o.xs.map((_, i) => i).filter(i => i % step === 0);
+  if (o.forceLast !== false && !lblIdx.includes(n - 1)) { if (n - 1 - lblIdx[lblIdx.length - 1] < step * 0.6) lblIdx.pop(); lblIdx.push(n - 1); }
+  for (const i of lblIdx) { const t = S('text', { class: 'ax', x: x(i), y: H - 10, 'text-anchor': i === n - 1 && n > 1 && o.forceLast !== false ? 'end' : i === 0 ? 'start' : 'middle' }); t.textContent = o.xFmt ? o.xFmt(o.xs[i]) : o.xs[i]; svg.append(t); }
+  // 기준선
+  if (o.ref?.y != null) { svg.append(S('line', { class: 'ref', x1: m.l, x2: W - m.r, y1: y(o.ref.y), y2: y(o.ref.y) })); const t = S('text', { class: 'reflbl', x: W - m.r, y: y(o.ref.y) - 5, 'text-anchor': 'end' }); t.textContent = o.ref.label; svg.append(t); }
+  // 선
+  o.series.forEach(s => {
+    let d = '', open = false;
+    s.vals.forEach((v, i) => { if (v == null) { open = false; return; } d += (open ? ' L' : ' M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); open = true; });
+    const p = S('path', { class: 'ln', d: d.trim(), stroke: s.color }); if (s.dash) p.setAttribute('stroke-dasharray', s.dash); if (s.width) p.setAttribute('stroke-width', s.width); svg.append(p);
+    // 단일 점(양 옆이 결측)도 보이게
+    s.vals.forEach((v, i) => { if (v != null && (s.vals[i - 1] == null) && (s.vals[i + 1] == null)) svg.append(S('circle', { cx: x(i), cy: y(v), r: 3, fill: s.color })); });
+    // 끝점 라벨
+    const li = s.vals.map((v, i) => v == null ? -1 : i).filter(i => i >= 0).pop();
+    if (li != null && o.endLabel !== false) { const hollow = o.partialLast && li === n - 1; svg.append(S('circle', { cx: x(li), cy: y(s.vals[li]), r: 4, fill: hollow ? 'var(--surface)' : s.color, stroke: hollow ? s.color : 'var(--surface)', 'stroke-width': 2 })); }
+  });
+  // 크로스헤어
+  const xh = S('line', { class: 'xh', x1: 0, x2: 0, y1: m.t, y2: H - m.b }); svg.append(xh);
+  const pts = o.series.map(s => { const c = S('circle', { class: 'pt', r: 4.5, fill: s.color, stroke: 'var(--surface)', 'stroke-width': 2 }); svg.append(c); return c; });
+  const hit = S('rect', { x: m.l - slot / 2, y: 0, width: W - m.l - m.r + slot, height: H, fill: 'transparent' }); svg.append(hit);
+  const tip = $('#tip');
+  const show = i => {
+    host.classList.add('is-hover'); xh.setAttribute('x1', x(i)); xh.setAttribute('x2', x(i));
+    o.series.forEach((s, k) => { const v = s.vals[i]; pts[k].style.display = v == null ? 'none' : ''; if (v != null) { pts[k].setAttribute('cx', x(i)); pts[k].setAttribute('cy', y(v)); } });
+    tip.replaceChildren(el('div', { class: 't', text: o.tipTitle ? o.tipTitle(o.xs[i]) : o.xs[i] }), ...o.series.map(s => el('div', { class: 'r' }, el('span', { class: 'k' }, el('i', { style: `background:${s.color}` }), document.createTextNode(s.label)), el('b', { class: 'num', text: s.vals[i] == null ? '–' : o.yFmt(s.vals[i]) + (o.unit ? ' ' + o.unit : '') }))));
+    tip.style.display = 'block';
+    const r = host.getBoundingClientRect(), px = r.left + x(i) * r.width / W + window.scrollX, tw = tip.offsetWidth;
+    tip.style.left = Math.min(px + 12, window.scrollX + document.documentElement.clientWidth - tw - 8) + 'px';
+    tip.style.top = (r.top + window.scrollY + 8) + 'px';
+  };
+  const hide = () => { host.classList.remove('is-hover'); tip.style.display = 'none'; };
+  const idxAt = cx => { const r = svg.getBoundingClientRect(); const vx = (cx - r.left) * W / r.width; return Math.max(0, Math.min(n - 1, Math.round((vx - m.l) / (slot || 1)))); };
+  hit.addEventListener('pointermove', e => show(idxAt(e.clientX)));
+  hit.addEventListener('pointerleave', hide);
+  svg.setAttribute('tabindex', '0'); let fi = n - 1;
+  svg.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') { fi = Math.max(0, fi - 1); show(fi); e.preventDefault(); } if (e.key === 'ArrowRight') { fi = Math.min(n - 1, fi + 1); show(fi); e.preventDefault(); } if (e.key === 'Escape') hide(); });
+  svg.addEventListener('blur', hide);
+  host.append(svg);
+}
+function niceTicks(lo, hi, k) {
+  const span = hi - lo || 1, raw = span / k, p = Math.pow(10, Math.floor(Math.log10(raw))), c = [1, 2, 2.5, 5, 10].find(c => c * p >= raw) * p;
+  const out = []; for (let v = Math.ceil(lo / c) * c; v <= hi + 1e-9; v += c) out.push(+v.toFixed(6)); return out;
+}
+function legend(host, items) { host.replaceChildren(...items.map(it => el('span', {}, el('i', { class: it.dash ? 'dash' : it.sq ? 'sq' : '', style: it.dash ? `color:${it.color}` : `background:${it.color}` }), document.createTextNode(it.label)))); }
+function table(host, head, rows) { const t = el('table'); t.append(el('thead', {}, el('tr', {}, ...head.map(h => el('th', { text: h })))), el('tbody', {}, ...rows.map(r => el('tr', {}, ...r.map((c, i) => el('td', { class: i ? 'num' : '', text: c })))))); host.replaceChildren(t); }
+
+/* ============ 렌더: 일별 추이 ============ */
+function renderDaily() {
+  const ds = rangeDays(), mt = state.metric, M = METRIC[mt];
+  const series = dirs().map(k => ({ key: k, label: DIR[k].label, color: DIR[k].color, vals: ds.map(d => { const v = g(d, `bridge:${k}`)?.[mt]; return v == null ? null : mt === 'cg' ? v * 100 : v; }) }));
+  const base = state.baseline?.groups; let ref = null;
+  if (base && state.dir !== 'both' && base[`bridge:${state.dir}`]?.[mt] != null) ref = { y: mt === 'cg' ? base[`bridge:${state.dir}`][mt] * 100 : base[`bridge:${state.dir}`][mt], label: `통제 전 ${M.label}` };
+  const yFmt = mt === 'tt' ? v => fTt(v) : mt === 'cg' ? v => Math.round(v) + '%' : f1;
+  const T = todayInfo();
+  lineChart($('#c-daily'), { xs: ds, xFmt: md, series, yFmt, yTick: mt === 'tt' ? v => Math.round(v) + 's' : mt === 'cg' ? v => Math.round(v) + '%' : v => Math.round(v), unit: mt === 'tt' || mt === 'cg' ? '' : M.unit, weekend: true, ref, yMin0: mt === 'cg', tipTitle: d => d === T.d && T.partial ? `${mdw(d)} (0–${T.last}시, 진행 중)` : mdw(d), partialLast: T.partial && ds[ds.length - 1] === T.d, aria: `${M.label} 일별 추이` });
+  $('#daily-sub').textContent = `${M.label}${mt === 'tt' ? ' (대덕대교네거리↔과학공원네거리)' : mt === 'cg' ? '' : ' (km/h)'}. 주말은 회색 띠.${M.lower === 'worse' ? ' 낮을수록 막힘.' : ' 높을수록 막힘.'}${T.partial ? ` 오늘(빈 점)은 ${T.last}시까지의 값.` : ''}`;
+  legend($('#l-daily'), [...series.map(s => ({ label: s.label, color: s.color })), { label: '주말', color: 'var(--surface-2)', sq: true }, ...(ref ? [{ label: ref.label, color: 'var(--s3)', dash: true }] : [])]);
+  table($('#daily-tbl'), ['날짜', ...series.map(s => `${s.label} ${M.label}`), ...series.map(s => `${s.label} 표본`)], ds.map((d, i) => [mdw(d), ...series.map(s => s.vals[i] == null ? '–' : yFmt(s.vals[i])), ...series.map(s => f0(g(d, `bridge:${s.key}`)?.n))]).reverse());
+}
+
+/* ============ 렌더: 시간대 ============ */
+function renderHourly() {
+  const today = latestDay(), hrs = Array.from({ length: 24 }, (_, h) => h);
+  const series = [];
+  if (state.dir === 'both') {
+    for (const k of dirs()) series.push({ label: `${DIR[k].label} · ${mdw(today)}`, color: DIR[k].color, vals: g(today, `bridge:${k}`)?.h ?? hrs.map(() => null) });
+    $('#hourly-sub').textContent = '오늘(마지막 수집일)의 방향별 24시간 프로필. 띠는 출근·퇴근 피크. 한 방향을 고르면 기간 평균과 비교합니다.';
+  } else {
+    const grp = `bridge:${state.dir}`;
+    series.push({ label: `${mdw(today)} (오늘)`, color: DIR[state.dir].color, vals: g(today, grp)?.h ?? hrs.map(() => null) });
+    series.push({ label: '기간 평일 평균', color: 'var(--ctx)', vals: hourlyAvg(grp, d => !isWe(d) && d !== today) });
+    series.push({ label: '기간 주말 평균', color: 'var(--ctx)', dash: '4 4', vals: hourlyAvg(grp, d => isWe(d) && d !== today) });
+    const b = state.baseline?.groups?.[grp]?.h; if (b) series.push({ label: `통제 전 (${state.baseline.period ?? '기준'})`, color: 'var(--s3)', vals: b });
+    $('#hourly-sub').textContent = `${DIR[state.dir].long} 24시간 프로필: 오늘 vs 기간 평균${b ? ' vs 통제 전' : ''}. 띠는 출근·퇴근 피크.`;
+  }
+  const P = state.daily.peak ?? { am: [7, 9], pm: [17, 19] };
+  lineChart($('#c-hourly'), { xs: hrs, xFmt: h => h + '시', series, yFmt: f1, yTick: v => Math.round(v), unit: 'km/h', bands: [{ from: P.am[0], to: P.am[1] - 1, label: '출근' }, { from: P.pm[0], to: P.pm[1] - 1, label: '퇴근' }], tipTitle: h => `${h}:00–${h}:59`, endLabel: false, forceLast: false, aria: '시간대별 속도' });
+  legend($('#l-hourly'), series.map(s => ({ label: s.label, color: s.color, dash: !!s.dash })));
+  table($('#hourly-tbl'), ['시간대', ...series.map(s => s.label + ' (km/h)')], hrs.map(h => [`${h}:00`, ...series.map(s => f1(s.vals[h]))]));
+}
+
+/* ============ 렌더: 히트맵 ============ */
+const BINS = [10, 15, 20, 25, 30, 40]; // km/h 경계 — 7단계, 느릴수록 진함
+function heatClass(v) { if (v == null) return 'na'; let i = BINS.findIndex(b => v < b); if (i < 0) i = BINS.length; return `b${7 - i}`; }
+function renderHeat() {
+  const host = $('#c-heat'); host.replaceChildren();
+  const ds = rangeDays().slice(-21);
+  for (const k of dirs()) {
+    const grp = `bridge:${k}`;
+    if (state.dir === 'both') host.append(el('div', { class: 'sub', style: 'margin-top:10px', text: DIR[k].long }));
+    const grid = el('div', { class: 'heat', style: 'grid-template-columns:64px repeat(24,1fr)', role: 'img', 'aria-label': `${DIR[k].label} 일자별 시간대별 속도 히트맵` });
+    grid.append(el('div'));
+    for (let h = 0; h < 24; h++) grid.append(el('div', { class: 'hl', text: h % 3 === 0 ? String(h) : '' }));
+    for (const d of ds) {
+      grid.append(el('div', { class: 'rl' + (isWe(d) ? ' we' : ''), text: mdw(d) }));
+      const H = g(d, grp)?.h ?? [];
+      for (let h = 0; h < 24; h++) {
+        const v = H[h] ?? null, c = el('div', { class: `c ${heatClass(v)}`, tabindex: '0', 'aria-label': `${mdw(d)} ${h}시 ${v == null ? '자료 없음' : f1(v) + ' km/h'}` });
+        if (v != null) c.style.background = `var(--heat-${heatClass(v).slice(1)})`;
+        const showTip = () => { const tip = $('#tip'); tip.replaceChildren(el('div', { class: 't', text: `${mdw(d)} ${h}:00–${h}:59` }), el('div', { class: 'r' }, el('span', { class: 'k', text: DIR[k].label }), el('b', { class: 'num', text: v == null ? '자료 없음' : f1(v) + ' km/h' }))); tip.style.display = 'block'; const r = c.getBoundingClientRect(); tip.style.left = Math.min(r.left + window.scrollX + 14, window.scrollX + document.documentElement.clientWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (r.top + window.scrollY - 54) + 'px'; };
+        const hideTip = () => { $('#tip').style.display = 'none'; };
+        c.addEventListener('pointerenter', showTip); c.addEventListener('pointerleave', hideTip); c.addEventListener('focus', showTip); c.addEventListener('blur', hideTip);
+        grid.append(c);
+      }
+    }
+    host.append(grid);
+  }
+  const ramp = $('#heat-ramp'); ramp.replaceChildren(el('span', { text: '빠름' }), el('span', { class: 'cells' }, ...[1, 2, 3, 4, 5, 6, 7].map(i => el('i', { style: `background:var(--heat-${i})`, title: rampLabel(i) }))), el('span', { text: '느림 (km/h)' }), el('span', { style: 'margin-left:auto', text: `구간: ${['≥40', '30–40', '25–30', '20–25', '15–20', '10–15', '<10'].join(' · ')}` }));
+  const rows = [];
+  for (const k of dirs()) for (const d of ds) rows.push([`${DIR[k].label} ${mdw(d)}`, ...(g(d, `bridge:${k}`)?.h ?? Array(24).fill(null)).map(f1)]);
+  table($('#heat-tbl'), ['방향·날짜', ...Array.from({ length: 24 }, (_, h) => h + '시')], rows);
+}
+function rampLabel(i) { return ['≥40', '30–40', '25–30', '20–25', '15–20', '10–15', '<10'][i - 1] + ' km/h'; }
+
+/* ============ 렌더: 우회도로 ============ */
+function renderDetour() {
+  const today = latestDay(), ds = rangeDays();
+  const groups = Object.entries(state.daily.groups ?? {}).filter(([k, v]) => v.kind === 'detour' && ds.some(d => g(d, k)));
+  const T = todayInfo();
+  const rows = groups.map(([k, meta]) => {
+    const t = g(today, k), c = cmpVal(k, 'spd', T), live = state.latest?.groups?.[k];
+    const vals = ds.map(d => g(d, k)?.spd ?? null);
+    return { k, label: meta.label, live, t, v: c.v, avg: c.ref, chg: c.v != null && c.ref ? (c.v - c.ref) / c.ref : null, vals };
+  }).sort((a, b) => (a.chg ?? 1) - (b.chg ?? 1));
+  const host = $('#detour-tbl');
+  if (!rows.length) { host.replaceChildren(el('div', { class: 'empty', text: '우회도로 링크가 아직 수집되지 않았습니다. traffic/links.json 의 detours 정규식과 discover.json 을 확인하세요.' })); return; }
+  const tb = el('table', { class: 'det' });
+  tb.append(el('thead', {}, el('tr', {}, ...['도로', '지금', T.partial ? `오늘 0–${T.last}시` : '오늘 평균', T.partial ? `기간 같은 시간대 (${ds.length - 1}일)` : `기간 평균 (${ds.length}일)`, '변화', '오늘 피크 7–9 / 17–19', '오늘 혼잡', '추이'].map(h => el('th', { text: h })))));
+  const body = el('tbody');
+  for (const r of rows) {
+    const d = delta(r.v, r.avg, 'worse', '기간 평균 대비', true);
+    const tr = el('tr', {},
+      el('td', { text: r.label }),
+      el('td', { class: 'num' }, r.live ? congPill(r.live.cg, r.live.spd) : document.createTextNode('–')),
+      el('td', { class: 'num', text: r.v != null ? f1(r.v) + ' km/h' : '–' }),
+      el('td', { class: 'num', text: r.avg != null ? f1(r.avg) + ' km/h' : '–' }),
+      el('td', { class: 'num' }, d),
+      el('td', { class: 'num', text: r.t ? `${f1(r.t.am)} / ${f1(r.t.pm)}` : '–' }),
+      el('td', { class: 'num', text: r.t ? pct(r.t.cg) : '–' }),
+      el('td', { class: 'sp' }, sparkSmall(r.vals)));
+    body.append(tr);
+  }
+  tb.append(body); host.replaceChildren(tb);
+}
+function congPill(cg, spd) {
+  // 그룹 혼잡 비율 → 등급 라벨 (아이콘+글자, 색만으로 의미를 싣지 않음)
+  const lvl = cg == null ? 0 : cg >= 0.6 ? 3 : cg >= 0.3 ? 2 : 1;
+  const lbl = ['자료 없음', '원활', '서행', '정체'][lvl];
+  return el('span', { class: `pill c${lvl}` }, el('i'), document.createTextNode(`${lbl}${spd != null ? ' · ' + f1(spd) + ' km/h' : ''}`));
+}
+function sparkSmall(vals) {
+  const W = 110, H = 24, ys = vals.filter(v => v != null); const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, 'aria-hidden': 'true' });
+  if (ys.length < 2) return svg;
+  const lo = Math.min(...ys) * 0.9, hi = Math.max(...ys) * 1.05, x = i => 2 + i * (W - 4) / (vals.length - 1), y = v => H - 2 - (v - lo) / (hi - lo || 1) * (H - 4);
+  let d = '', open = false; vals.forEach((v, i) => { if (v == null) { open = false; return; } d += (open ? ' L' : ' M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); open = true; });
+  svg.append(S('path', { d: d.trim(), fill: 'none', stroke: 'var(--ctx)', 'stroke-width': 1.5, 'stroke-linejoin': 'round' }));
+  return svg;
+}
+
+/* ============ 렌더: 교통량 ============ */
+function renderVolume() {
+  const V = state.volume, host = $('#c-vol');
+  if (!V || !V.days || !Object.keys(V.days).length) {
+    host.replaceChildren(el('div', { class: 'empty' }, document.createTextNode('교통량 자료가 아직 없습니다. 교통정보센터 통계(도로-교통량)를 내려받아 '), el('code', { text: 'node traffic/import-volume.mjs <파일>' }), document.createTextNode(' 로 넣으면 일별 교통량과 통제 전 6만 대 기준선이 여기에 그려집니다.')));
+    $('#vol-sub').textContent = '대전교통정보센터 통계 가져오기 전'; $('#l-vol').replaceChildren(); $('#vol-tbl').replaceChildren(); return;
+  }
+  const all = Object.keys(V.days).sort(), ds = state.range ? all.slice(-state.range) : all;
+  const keys = Object.keys(V.days[all[all.length - 1]] ?? {}).filter(k => k !== 'total');
+  const series = keys.length ? keys.map(k => ({ key: k, label: DIR[k]?.label ?? k, color: DIR[k]?.color ?? 'var(--s3)', vals: ds.map(d => V.days[d]?.[k] ?? null) })) : [{ key: 'total', label: '양방향 합계', color: 'var(--s1)', vals: ds.map(d => V.days[d]?.total ?? null) }];
+  if (state.dir !== 'both' && keys.length) series.splice(0, series.length, ...series.filter(s => s.key === state.dir));
+  const ref = V.before ?? state.daily?.closure?.dailyVolumeBefore;
+  barChart(host, { xs: ds, series, ref: ref ? { y: ref, label: `통제 전 약 ${f0(ref)} 대/일` } : null });
+  $('#vol-sub').textContent = `${V.unit ?? '대/일'} · 출처: ${V.source ?? '대전교통정보센터 통계'}${V.imported ? ' · 가져온 날 ' + V.imported : ''}`;
+  legend($('#l-vol'), [...series.map(s => ({ label: s.label, color: s.color, sq: true })), ...(ref ? [{ label: '통제 전 기준', color: 'var(--s3)', dash: true }] : [])]);
+  table($('#vol-tbl'), ['날짜', ...series.map(s => s.label + ' (대)'), '합계 (대)'], ds.map((d, i) => [mdw(d), ...series.map(s => f0(s.vals[i])), f0(V.days[d]?.total ?? series.reduce((a, s) => a + (s.vals[i] ?? 0), 0))]).reverse());
+}
+/** 누적 막대 (방향 2개) + 기준선. 막대 ≤24px, 2px 간격, 끝만 둥글게 */
+function barChart(host, o) {
+  host.replaceChildren();
+  const W = Math.max(320, host.clientWidth || 640), H = 260, m = { t: 16, r: 14, b: 30, l: 52 }, n = o.xs.length;
+  const svg = S('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '일별 교통량' });
+  const totals = o.xs.map((_, i) => o.series.reduce((a, s) => a + (s.vals[i] ?? 0), 0));
+  const hi = Math.max(...totals, o.ref?.y ?? 0) * 1.1 || 1;
+  const slot = (W - m.l - m.r) / n, bw = Math.min(24, slot * 0.7), x = i => m.l + slot * i + slot / 2, y = v => m.t + (H - m.t - m.b) * (1 - v / hi);
+  for (const tv of niceTicks(0, hi, 4)) { svg.append(S('line', { class: 'grid', x1: m.l, x2: W - m.r, y1: y(tv), y2: y(tv) })); const t = S('text', { class: 'ax', x: m.l - 6, y: y(tv) + 4, 'text-anchor': 'end' }); t.textContent = tv >= 1000 ? Math.round(tv / 1000) + 'K' : tv; svg.append(t); }
+  const step = Math.ceil(n / Math.max(3, Math.floor((W - m.l - m.r) / 56)));
+  o.xs.forEach((d, i) => { if (i % step && i !== n - 1) return; const t = S('text', { class: 'ax', x: x(i), y: H - 10, 'text-anchor': 'middle' }); t.textContent = md(d); svg.append(t); });
+  o.xs.forEach((d, i) => {
+    let acc = 0; o.series.forEach((s, k) => { const v = s.vals[i]; if (!v) return; const y0 = y(acc), y1 = y(acc + v); const top = k === o.series.length - 1 || !o.series.slice(k + 1).some(t => t.vals[i]); const h = Math.max(1, y0 - y1 - (k ? 2 : 0));
+      svg.append(S('path', { d: roundTop(x(i) - bw / 2, y1, bw, h, top ? 4 : 0), fill: s.color })); acc += v; });
+  });
+  if (o.ref) { svg.append(S('line', { class: 'ref', x1: m.l, x2: W - m.r, y1: y(o.ref.y), y2: y(o.ref.y) })); const t = S('text', { class: 'reflbl', x: W - m.r, y: y(o.ref.y) - 5, 'text-anchor': 'end' }); t.textContent = o.ref.label; svg.append(t); }
+  const tip = $('#tip');
+  o.xs.forEach((d, i) => { const r = S('rect', { x: m.l + slot * i, y: m.t, width: slot, height: H - m.t - m.b, fill: 'transparent' }); r.addEventListener('pointerenter', () => { tip.replaceChildren(el('div', { class: 't', text: mdw(d) }), ...o.series.map(s => el('div', { class: 'r' }, el('span', { class: 'k' }, el('i', { style: `background:${s.color}` }), document.createTextNode(s.label)), el('b', { class: 'num', text: f0(s.vals[i]) }))), el('div', { class: 'r' }, el('span', { class: 'k', text: '합계' }), el('b', { class: 'num', text: f0(totals[i]) }))); tip.style.display = 'block'; const b = host.getBoundingClientRect(); tip.style.left = Math.min(b.left + window.scrollX + x(i) * b.width / W + 12, window.scrollX + document.documentElement.clientWidth - tip.offsetWidth - 8) + 'px'; tip.style.top = (b.top + window.scrollY + 8) + 'px'; }); r.addEventListener('pointerleave', () => tip.style.display = 'none'); svg.append(r); });
+  host.append(svg);
+}
+function roundTop(x, y, w, h, r) { r = Math.min(r, w / 2, h); return `M${x} ${y + h} V${y + r} Q${x} ${y} ${x + r} ${y} H${x + w - r} Q${x + w} ${y} ${x + w} ${y + r} V${y + h} Z`; }
+
+/* ============ 렌더: 지금 ============ */
+function renderLive() {
+  const L = state.latest, host = $('#live-grid'); host.replaceChildren();
+  if (!L) { host.append(el('div', { class: 'empty', text: '실시간 자료가 없습니다.' })); return; }
+  $('#live-sub').textContent = `${L.t.slice(0, 16).replace('T', ' ')} 수집값. 5분마다 새로 읽습니다. 소통등급은 대전시 교통정보센터 기준(원활·서행·정체).`;
+  const bridge = L.links.filter(l => l.grp.startsWith('bridge:')).sort((a, b) => a.grp.localeCompare(b.grp) || a.sqc - b.sqc);
+  for (const l of bridge) {
+    const k = l.grp.split(':')[1];
+    host.append(el('div', { class: 'lk', style: `border-top:3px solid ${DIR[k]?.color ?? 'var(--ctx)'}` },
+      el('div', { class: 'n', text: `${l.s} → ${l.e}` }),
+      el('div', { class: 'sub', text: `${l.road} · ${DIR[k]?.label ?? '방향 미확정'} · ${l.len ? l.len + 'm' : ''}` }),
+      el('div', { class: 'm' }, el('span', {}, el('b', { class: 'num', text: f1(l.spd) }), el('small', { text: ' km/h' })), el('span', {}, el('b', { class: 'num', text: l.tt ? fTt(l.tt) : '–' }), el('small', { text: ' 통행' })), cgPill(l.cg))));
+  }
+  const det = Object.entries(L.groups).filter(([k]) => k.startsWith('detour:'));
+  if (det.length) {
+    const card = el('div', { class: 'lk' }, el('div', { class: 'n', text: '우회도로 (링크 평균)' }));
+    const kv = el('div', { class: 'kv', style: 'margin-top:8px' });
+    for (const [k, gr] of det) kv.append(el('span', { class: 'k', text: state.daily.groups?.[k]?.label ?? k }), el('span', { class: 'v num', text: f1(gr.spd) + ' km/h' }), el('span', { class: 'd' }, congPill(gr.cg)));
+    card.append(kv); host.append(card);
+  }
+}
+function cgPill(c) { const k = [0, 1, 2, 3].includes(c) ? c : 0; return el('span', { class: `pill c${k}` }, el('i'), document.createTextNode(['정보 없음', '원활', '서행', '정체'][k])); }
+
+/* ============ 조립 ============ */
+function renderAll() {
+  renderStatus();
+  if (!days().length) return;
+  $('#f-note').textContent = `${rangeDays().length}일 · ${md(rangeDays()[0])}~${md(latestDay())}`;
+  renderSummary(); renderDaily(); renderHourly(); renderHeat(); renderDetour(); renderVolume(); renderLive();
+}
+function bindSeg(id, key, cb) { $$(`#${id} button`).forEach(b => b.addEventListener('click', () => { $$(`#${id} button`).forEach(x => x.classList.toggle('is-on', x === b)); state[key] = key === 'range' ? +b.dataset.v : b.dataset.v; cb(); })); }
+bindSeg('f-range', 'range', renderAll); bindSeg('f-dir', 'dir', renderAll); bindSeg('m-daily', 'metric', renderDaily);
+$$('.tbl-btn').forEach(b => b.addEventListener('click', () => { const t = $('#' + b.dataset.for); t.classList.toggle('is-on'); b.classList.toggle('is-on', t.classList.contains('is-on')); b.textContent = t.classList.contains('is-on') ? '차트' : '표'; }));
+let rsz; addEventListener('resize', () => { clearTimeout(rsz); rsz = setTimeout(() => { if (days().length) { renderDaily(); renderHourly(); renderVolume(); } }, 150); });
+
+async function load(first) {
+  const main = $('#main'); if (!first) main.classList.add('loading');
+  try {
+    const [daily, latest, volume, baseline] = await Promise.all([getJson('traffic/data/daily.json', true), getJson('traffic/data/latest.json', true), getJson('traffic/data/volume.json', true), getJson('traffic/data/baseline.json', true)]);
+    state.daily = daily; state.latest = latest; state.volume = volume; state.baseline = baseline;
+    renderFacts();
+    if (!daily || !Object.keys(daily.days ?? {}).length) {
+      $('#setup').hidden = false; $('#body').hidden = true; renderStatus();
+      $('#setup-err').textContent = '';
+      return;
+    }
+    $('#setup').hidden = true; $('#body').hidden = false;
+    renderAll();
+  } catch (e) {
+    renderFacts(); $('#setup').hidden = false; $('#setup-err').textContent = '자료를 읽지 못했습니다: ' + e.message; $('#st-main').textContent = '자료 읽기 실패'; $('#status').classList.add('off');
+  } finally { main.classList.remove('loading'); }
+}
+load(true);
+setInterval(() => load(false), 5 * 60 * 1000);
+</script>
+</body>
+</html>

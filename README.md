@@ -11,10 +11,12 @@
 | `index.html` | 페이지. 마크업·스타일·스크립트가 한 파일에 있다. 데이터는 포함하지 않는다. |
 | `data.js` | **모든 데이터.** `window.DUNSAN_DATA = {...}` 한 줄 안에 JSON 객체. 구역·단지·좌표·경계·연차별 물량·공공기여·평가 배점. |
 | `validate.mjs` | `data.js` 무결성 검사. 세대수 합계, 좌표 범위, 폴리곤 닫힘, 연차 합계, 공공기여 합계 등. |
-| `.github/workflows/validate.yml` | push·PR마다 `validate.mjs`와 `index.html` 스크립트 구문 검사를 실행. |
+| `.github/workflows/validate.yml` | push·PR마다 `validate.mjs`, 수집 스크립트, HTML 인라인 스크립트 구문 검사를 실행. |
+| `.github/workflows/traffic.yml` | 10분마다 대전교통정보 API를 수집해 `traffic/data/`에 커밋. |
 | `geocode.mjs` | 새 단지를 추가할 때 OpenStreetMap에서 경계·중심점을 받아 `data.js`에 써 넣는다. |
 | `assets/logo.svg`, `favicon*.png`, `apple-touch-icon.png`, `icon-*.png`, `site.webmanifest` | 마크와 아이콘 세트. |
 | `og.png` | 링크 미리보기 이미지(1200×630). 실제 구역 폴리곤으로 그렸다. |
+| `traffic.html`, `traffic/` | **대덕대교 통행 모니터** — 트램 공사 부분통제 기간의 소통 기록 대시보드와 수집 스크립트. 아래 별도 절. |
 | `audit.html` | **행정사무감사 질의 도우미**(의정활동용, 검색엔진 제외). 집행부 약속 추적표(localStorage), 질의 항목 빌더(10개 주제, 질의서·구두요지·자료요구서 형식), 업무보고·회의록 PDF 분석(pdf.js, 브라우저 내 처리), 선택형 AI 초안(본인 Claude API 키, 브라우저에서 직접 호출). 주민용 페이지 푸터에서만 링크. |
 
 외부 의존성(모두 키 불필요): Leaflet 1.9.4(cdnjs), 배경 지도는 OpenStreetMap 표준 타일 기본 · Esri World Imagery(위성) 전환, Google Fonts(IBM Plex Sans KR / Mono).
@@ -79,6 +81,45 @@ OSM 타일 서버는 Referer가 없거나 브라우저가 아닌 User-Agent(앱 
 - 업무보고 PDF 분석은 정규식 기반이다: 예산·집행·이월·불용 + 숫자가 있는 줄, "검토하겠·추진 예정·연내" 등 약속 표현, 노후계획도시 관련 키워드. 표 형태 PDF는 줄이 섞일 수 있으니 원문과 대조한다.
 - AI 초안은 `https://api.anthropic.com/v1/messages`를 브라우저에서 직접 호출한다(`anthropic-dangerous-direct-browser-access` 헤더). 키는 localStorage에만 저장되며 이 사이트에는 서버가 없다. 비공개 자료는 넣지 않는다.
 - 질의 주제·근거 문장은 `audit.html`의 `TOPICS`, 약속 목록은 `PROMISES` 배열에 있다. 행감 답변이 나오면 `PROMISES`에 결과를 반영하고 `TOPICS`의 근거를 갱신한다.
+
+## 대덕대교 통행 모니터 (traffic.html)
+
+트램 2호선 공사로 대덕대교 5차로가 통제되는 기간(2026.10.19~2029.5.12)의 소통 변화를 매일 기록하는 대시보드. 공공데이터포털 「대전광역시_대전교통정보 서비스」(15157924, 무료·자동승인)의 `getTrafficInfoAll`을 GitHub Actions가 10분마다 호출해 결과를 저장소에 커밋하고(git scraping), 페이지는 그 JSON만 읽는다. 브라우저 쪽에는 키가 없다.
+
+| 파일 | 역할 |
+|---|---|
+| `traffic.html` | 대시보드. 방향별 요약(오늘 vs 기간 평균/통제 전), 일별 추이(하루 평균·출퇴근 피크·통행시간·혼잡 비율), 시간대 프로필, 일자×시간대 히트맵, 우회도로 표, 교통량, 실시간 링크값. 모든 차트에 표 보기. |
+| `traffic/links.json` | 수집할 링크 규칙(교량 구간·방향·우회도로 정규식, 링크 ID 고정), 통제 정보. |
+| `traffic/collect.mjs` | 수집·집계. `--discover`(링크 이름 확인), `--rebuild`(raw로 daily 재계산), `--from-file`(저장된 응답으로 테스트). |
+| `traffic/import-volume.mjs` | 교통정보센터 통계(tportal.daejeon.go.kr) CSV → `volume.json`(일별 교통량) 또는 `--baseline` → `baseline.json`(통제 전 시간대별 속도). UTF-8/EUC-KR 자동, 열 이름 자동 인식. |
+| `traffic/data/latest.json` | 마지막 수집값. `raw/YYYY-MM-DD.json` 하루치 표본(35일 보관). `daily.json` 일별·시간대별 집계(영구). |
+| `.github/workflows/traffic.yml` | `*/10 * * * *` 스케줄 + 수동 실행(discover 옵션). 커밋 메시지에 `[skip ci]`. |
+
+### 처음 설정 (한 번)
+
+1. 공공데이터포털에서 「대전광역시_대전교통정보 서비스」 활용신청 → 마이페이지 인증키(Decoding) 복사.
+2. 저장소 Settings → Secrets and variables → Actions → `DATA_GO_KR_KEY` 등록.
+3. Actions → traffic collect → Run workflow, **discover 체크** → 커밋된 `traffic/data/discover.json`에서 대덕대로 링크가 `bridge:toDunsan` / `bridge:toDaedeok`으로 잡혔는지, `ud`(1 상행/2 하행)와 실제 방향이 맞는지 확인. 어긋나면 `links.json`의 `bridge.linkIds`에 ID를 직접 적거나 `directions.*.ud`를 서로 바꾼다.
+4. 이후 자동. 첫 집계는 다음 정각 이후 페이지에 보인다. 저장소에 60일간 push가 없으면 GitHub가 스케줄을 끄므로, 봇 커밋이 멈춘 뒤에는 Actions 탭에서 다시 켠다.
+
+### 교통량·통제 전 기준 넣기
+
+소통정보 API에는 차량 대수가 없고, 수집도 통제 시작 뒤에 시작했다. 두 가지는 대전교통정보센터 「교통데이터 통계분석」(http://tportal.daejeon.go.kr/ → 도로-교통량, 도로소통정보)에서 내려받아 넣는다.
+
+```
+node traffic/import-volume.mjs 교통량.csv                                  # → traffic/data/volume.json
+node traffic/import-volume.mjs 소통.csv --baseline "2026-09-01~2026-10-18"  # → traffic/data/baseline.json
+```
+
+`volume.json`이 있으면 교통량 섹션에 일별 막대와 통제 전 6만 대 기준선이 그려지고, `baseline.json`이 있으면 요약·일별·시간대 차트의 비교 대상이 "기간 평균"에서 "통제 전"으로 바뀐다. 두 파일은 수동 커밋.
+
+### 집계 규칙
+
+- 교량 구간 = 도로명 대덕대로, 양쪽 노드가 모두 대덕대교·과학공원 노드인 링크. 방향은 endNodeName → udType 순으로 판정.
+- 같은 시각의 링크들은 한 표본: 속도 평균, 통행시간은 합(교량만). 속도 0은 결측으로 버린다.
+- 하루 평균·최저, 07–09시·17–19시 피크 평균, 혼잡 비율(소통등급 2·3 표본 비율), 시간대별 속도·통행시간·혼잡.
+- 오늘이 아직 진행 중이면 요약·우회도로 표의 비교는 같은 시간대(0시~마지막 시)끼리 한다. 피크는 그 시간대가 끝나야 값이 나온다.
+- 우회도로는 도로명이 같은 링크 전부의 평균(양방향), 통행시간은 계산하지 않는다.
 
 ## 구역 링크
 
