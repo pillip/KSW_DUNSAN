@@ -227,7 +227,7 @@ footer p+p{margin-top:6px}
 <div class="filters" role="group" aria-label="기간과 방향 선택">
   <span class="lbl">기간</span>
   <div class="seg" id="f-range">
-    <button data-v="7">7일</button><button data-v="14" class="is-on">14일</button><button data-v="30">30일</button><button data-v="0">전체</button>
+    <button data-v="7">7일</button><button data-v="14">14일</button><button data-v="30" class="is-on">30일</button><button data-v="0">전체</button>
   </div>
   <span class="lbl">방향</span>
   <div class="seg" id="f-dir">
@@ -284,7 +284,7 @@ footer p+p{margin-top:6px}
 </section>
 
 <section id="volume">
-  <div class="sec-h"><h2>교통량</h2><p>통제 전 대덕대교는 하루 약 6만 대가 지났습니다(대전일보, 2026.10). 소통정보 API는 차량 대수를 주지 않으므로, 교통량은 대전교통정보센터 통계(tportal.daejeon.go.kr → 교통데이터 통계분석 → 도로-교통량)에서 내려받아 <code>traffic/import-volume.mjs</code>로 넣으면 여기에 표시됩니다.</p></div>
+  <div class="sec-h"><h2>교통량</h2><p>교량 바로 옆 만년동 쪽 VDS 두 지점(연구단지 방향 VDS0016, 둔산 방향 VDS0015)의 시간당 대수. 대전교통 빅데이터 플랫폼 도로-교통량 통계에서 가져오며, 통제 전 평일 평균을 기준선으로 그립니다. 보도된 "하루 약 6만 대"(대전일보)와 같은 자릿수입니다.</p></div>
   <div class="card" id="volume-card">
     <div class="card-h">
       <div><h2 id="vol-title">일별 교통량</h2><div class="sub" id="vol-sub"></div></div>
@@ -293,6 +293,15 @@ footer p+p{margin-top:6px}
     <div class="chart" id="c-vol"></div>
     <div class="legend" id="l-vol"></div>
     <div class="tbl" id="vol-tbl"></div>
+  </div>
+  <div class="card" id="volh-card" style="margin-top:14px">
+    <div class="card-h">
+      <div><h2>시간대별 교통량</h2><div class="sub" id="volh-sub">통제 후 평일 평균과 통제 전 평일 평균의 시간당 대수. 피크가 깎이고 어깨 시간대로 번지는지 봅니다.</div></div>
+      <div class="tools"><button class="btn tbl-btn" data-for="volh-tbl">표</button></div>
+    </div>
+    <div class="chart" id="c-volh"></div>
+    <div class="legend" id="l-volh"></div>
+    <div class="tbl" id="volh-tbl"></div>
   </div>
 </section>
 
@@ -306,7 +315,8 @@ footer p+p{margin-top:6px}
   <div class="method">
     <div class="card">
       <h3>어디서 오는 자료인가</h3>
-      <p>공공데이터포털 「대전광역시_대전교통정보 서비스」(대전광역시 공공교통정책과) <code>getTrafficInfoAll</code>. 대전시 교통정보센터가 산출하는 링크(교차로 사이 구간)별 통행속도(km/h)·통행시간(초)·소통등급을 실시간으로 제공합니다. GitHub Actions가 10분마다 호출해 대덕대로 교량 구간과 우회도로 링크만 골라 저장합니다.</p>
+      <p><b>실시간(10분)</b> — 공공데이터포털 「대전광역시_대전교통정보 서비스」 <code>getTrafficInfoAll</code>. 링크(교차로 사이 구간)별 통행속도·통행시간·소통등급. GitHub Actions가 10분마다 호출해 대덕대로 교량 구간과 우회도로 링크만 저장합니다.</p>
+      <p style="margin-top:8px"><b>과거(1시간)</b> — 대전교통 빅데이터 플랫폼(tportal.daejeon.go.kr) 도로소통정보의 구간별 통행속도와 도로-교통량의 VDS 지점 자료. 10분 수집이 없는 날과 "통제 전" 기준은 여기서 옵니다. 같은 교통정보센터 자료라 구간 정의가 같습니다.</p>
     </div>
     <div class="card">
       <h3>어떻게 집계하나</h3>
@@ -320,8 +330,8 @@ footer p+p{margin-top:6px}
     <div class="card">
       <h3>한계</h3>
       <ul>
-        <li>소통정보는 <b>속도·시간</b>이지 <b>교통량(대수)</b>이 아닙니다. 대수는 교통정보센터 통계를 따로 넣어야 합니다.</li>
-        <li>수집은 통제 시작 뒤에 시작했으므로 "통제 전" 기준은 교통정보센터의 과거 통계를 <code>baseline.json</code>으로 넣어야 비교할 수 있습니다. 넣기 전까지는 기간 평균과 비교합니다.</li>
+        <li>교통량은 교량 위가 아니라 교량 바로 옆 만년동 쪽 VDS 두 지점(VDS0016 상행·VDS0015 하행) 값입니다. 대덕대교네거리에서 돌아 들어오는 차가 섞이므로 교량 통과량과 완전히 같지는 않습니다. 대전시 트램구간 일간보고서의 5공구 값과 같은 지점입니다.</li>
+        <li>교통정보센터 통계로 채운 날은 1시간 평균이라 통행시간·혼잡 비율이 없고, 10분 수집일과 표본 밀도가 다릅니다. 일별 표에 자료 출처를 적었습니다.</li>
         <li>10분 간격 표본이라 짧은 정체는 빠질 수 있고, API 장애 시 결측이 생깁니다. 표본 수를 함께 표시합니다.</li>
       </ul>
     </div>
@@ -359,7 +369,7 @@ const kstToday = () => new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10
 const DIR = { toDunsan: { label: '둔산 방향', long: '둔산 방향 (도룡동→만년동)', color: 'var(--s1)', lanes: 2 }, toDaedeok: { label: '연구단지 방향', long: '연구단지 방향 (만년동→도룡동)', color: 'var(--s2)', lanes: 3 } };
 const METRIC = { spd: { label: '하루 평균 속도', unit: 'km/h', fmt: f1, lower: 'worse' }, am: { label: '출근 피크(7–9시) 속도', unit: 'km/h', fmt: f1, lower: 'worse' }, pm: { label: '퇴근 피크(17–19시) 속도', unit: 'km/h', fmt: f1, lower: 'worse' }, tt: { label: '교량 통행시간', unit: '초', fmt: v => v == null ? '–' : fTt(v), lower: 'better' }, cg: { label: '혼잡(서행·정체) 비율', unit: '%', fmt: pct, lower: 'better' } };
 
-const state = { range: 14, dir: 'both', metric: 'spd', daily: null, latest: null, volume: null, baseline: null };
+const state = { range: 30, dir: 'both', metric: 'spd', daily: null, latest: null, volume: null, baseline: null, history: null, merged: null };
 const bust = () => '?t=' + Math.floor(Date.now() / 300000); // 5분 캐시 단위
 async function getJson(p, optional) {
   try { const r = await fetch(p + bust(), { cache: 'no-cache' }); if (!r.ok) { if (optional) return null; throw new Error(`${p} ${r.status}`); } return await r.json(); }
@@ -367,9 +377,20 @@ async function getJson(p, optional) {
 }
 
 /* ============ 데이터 선택 ============ */
-function days() { return Object.keys(state.daily?.days ?? {}).sort(); }
+/** 10분 수집(daily.json)이 없는 날은 교통정보센터 통계(history.json, 1시간 평균)로 채운다. 둘 다 있으면 10분 수집 우선. */
+function buildMerged() {
+  const out = {}; const H = state.history?.groups ?? {};
+  for (const [grp, gh] of Object.entries(H)) for (const [d, h] of Object.entries(gh.days ?? {})) {
+    const v = h.filter(x => x != null); if (!v.length) continue;
+    const sl = (a, b) => h.slice(a, b).filter(x => x != null);
+    (out[d] ??= {})[grp] = { n: v.length, spd: mean(h), min: Math.min(...v), tt: null, am: sl(7, 9).length ? mean(sl(7, 9)) : null, pm: sl(17, 19).length ? mean(sl(17, 19)) : null, cg: null, h, src: 'hist' };
+  }
+  for (const [d, gs] of Object.entries(state.daily?.days ?? {})) { out[d] ??= {}; for (const [grp, v] of Object.entries(gs)) if (v && v.n > 0) out[d][grp] = v; }
+  state.merged = out;
+}
+function days() { return Object.keys(state.merged ?? {}).sort(); }
 function rangeDays() { const d = days(); return state.range ? d.slice(-state.range) : d; }
-function g(d, grp) { return state.daily.days[d]?.[grp] ?? null; }
+function g(d, grp) { return state.merged?.[d]?.[grp] ?? null; }
 function dirs() { return state.dir === 'both' ? ['toDunsan', 'toDaedeok'] : [state.dir]; }
 const mean = a => { const b = a.filter(v => v != null && !Number.isNaN(v)); return b.length ? b.reduce((s, v) => s + v, 0) / b.length : null; };
 function periodAvg(grp, key, exclude) { return mean(rangeDays().filter(d => d !== exclude).map(d => g(d, grp)?.[key])); }
@@ -387,7 +408,7 @@ const hoursMean = (arr, upto) => mean((arr ?? []).slice(0, upto + 1));
 /** 그룹·지표의 {v: 오늘값, ref: 비교값, base: 통제 전 기준 사용 여부} */
 function cmpVal(grp, key, T) {
   const t = g(T.d, grp); if (!t) return { v: null, ref: null };
-  const base = state.baseline?.groups?.[grp];
+  const b0 = state.baseline?.groups?.[grp]; const base = b0 && isWe(T.d) && b0.we ? b0.we : b0;
   if (!T.partial) return { v: t[key], ref: base?.[key] ?? periodAvg(grp, key, T.d), base: base?.[key] != null };
   const hk = { spd: 'h', tt: 'tth', cg: 'cgh' }[key];
   if (hk) {
@@ -395,7 +416,7 @@ function cmpVal(grp, key, T) {
     const ref = base?.[hk] ? hoursMean(base[hk], T.last) : mean(rangeDays().filter(d => d !== T.d).map(d => hoursMean(g(d, grp)?.[hk], T.last)));
     return { v, ref, base: !!base?.[hk] };
   }
-  const P = state.daily.peak ?? { am: [7, 9], pm: [17, 19] };
+  const P = state.daily?.peak ?? { am: [7, 9], pm: [17, 19] };
   if (key === 'am' || key === 'pm') return T.last >= P[key][1] - 1 ? { v: t[key], ref: base?.[key] ?? periodAvg(grp, key, T.d), base: base?.[key] != null } : { v: null, ref: null, pending: T.last >= P[key][0] };
   return { v: t[key], ref: null };
 }
@@ -411,7 +432,7 @@ function renderFacts() {
     fact(`D+${dayN}`, '', `통제 ${dayN}일째 (${md(c.start)} 시작)`),
     fact(f0(left), '일', `해제까지 (${c.end.replace(/-/g, '.')} 예정, 약 ${months}개월)`),
     fact('10 → 5', '차로', '연구단지 방향 3차로 · 둔산 방향 2차로'),
-    fact(c.dailyVolumeBefore ? '약 ' + Math.round(c.dailyVolumeBefore / 1e4) + '만' : '약 6만', '대/일', '통제 전 하루 교통량 (대전일보)'),
+    state.volume?.before ? fact(f0(state.volume.before), '대/일', `통제 전 평일 평균 교통량 (${state.baseline?.range ? md(state.baseline.range[0]) + '~' + md(state.baseline.range[1]) : '교통정보센터'} VDS)`) : fact(c.dailyVolumeBefore ? '약 ' + Math.round(c.dailyVolumeBefore / 1e4) + '만' : '약 6만', '대/일', '통제 전 하루 교통량 (대전일보)'),
   );
 }
 function fact(v, u, l) { return el('div', { class: 'fact' }, el('div', { class: 'v' }, document.createTextNode(v), u ? el('small', { text: u }) : null), el('div', { class: 'l', text: l })); }
@@ -419,11 +440,18 @@ function fact(v, u, l) { return el('div', { class: 'fact' }, el('div', { class: 
 function renderStatus() {
   const st = $('#status'); st.classList.remove('stale', 'off');
   const t = state.latest?.t ?? state.daily?.updated;
-  if (!t) { $('#st-main').textContent = '수집 자료 없음'; st.classList.add('off'); return; }
+  const d = days(); const hd = Object.keys(state.history?.groups?.['bridge:toDunsan']?.days ?? {}).sort();
+  const histTxt = hd.length ? `교통정보센터 통계 ${md(hd[0])}~${md(hd[hd.length - 1])}` : '';
+  if (!t) {
+    if (!d.length) { $('#st-main').textContent = '수집 자료 없음'; st.classList.add('off'); return; }
+    $('#st-main').textContent = '10분 단위 실시간 수집은 아직 시작 전'; $('#st-sub').textContent = histTxt + ' (1시간 평균)'; st.classList.add('stale');
+    $('#upd').textContent = `자료 ${state.history?.fetched ?? ''}`; return;
+  }
   const ageMin = Math.round((Date.now() - new Date(t)) / 6e4);
-  const d = days(); const today = kstToday(); const n = Object.values(state.daily?.days?.[today] ?? {})[0]?.n;
+  const today = kstToday(); const n = Object.values(state.daily?.days?.[today] ?? {})[0]?.n;
+  const dd = Object.keys(state.daily?.days ?? {}).sort();
   $('#st-main').textContent = `마지막 수집 ${t.slice(5, 16).replace('T', ' ')} (${ageMin < 60 ? ageMin + '분 전' : Math.round(ageMin / 60) + '시간 전'})`;
-  $('#st-sub').textContent = `수집 ${d.length}일 (${d[0] ? md(d[0]) : ''}~) · 오늘 표본 ${n ?? 0}회 · 10분 간격`;
+  $('#st-sub').textContent = `10분 수집 ${dd.length}일 (${dd[0] ? md(dd[0]) : ''}~) · 오늘 표본 ${n ?? 0}회${histTxt ? ' · ' + histTxt : ''}`;
   if (ageMin > 40) st.classList.add(ageMin > 180 ? 'off' : 'stale');
   $('#upd').textContent = `갱신 ${t.slice(5, 16).replace('T', ' ')}`;
 }
@@ -449,7 +477,7 @@ function renderSummary() {
     }
     card.append(kv);
     const vals = rangeDays().map(d => ({ x: d, y: g(d, grp)?.spd ?? null }));
-    card.append(spark(vals, D.color, T.partial), el('div', { class: 'spark-l', text: `최근 ${vals.length}일 하루 평균 속도${T.partial ? ' (오늘은 진행 중)' : ''} · 오늘 표본 ${t.n}회` }));
+    card.append(spark(vals, D.color, T.partial), el('div', { class: 'spark-l', text: `최근 ${vals.length}일 하루 평균 속도${T.partial ? ' (오늘은 진행 중)' : ''} · ${t.src === 'hist' ? `${mdw(today)} 교통정보센터 1시간 평균` : `오늘 표본 ${t.n}회`}` }));
     wrap.append(card);
   }
 }
@@ -501,8 +529,10 @@ function lineChart(host, o) {
   const lblIdx = o.xs.map((_, i) => i).filter(i => i % step === 0);
   if (o.forceLast !== false && !lblIdx.includes(n - 1)) { if (n - 1 - lblIdx[lblIdx.length - 1] < step * 0.6) lblIdx.pop(); lblIdx.push(n - 1); }
   for (const i of lblIdx) { const t = S('text', { class: 'ax', x: x(i), y: H - 10, 'text-anchor': i === n - 1 && n > 1 && o.forceLast !== false ? 'end' : i === 0 ? 'start' : 'middle' }); t.textContent = o.xFmt ? o.xFmt(o.xs[i]) : o.xs[i]; svg.append(t); }
+  // 세로 마커 (통제 시작 등)
+  for (const mk of o.marks ?? []) { svg.append(S('line', { x1: x(mk.x), x2: x(mk.x), y1: m.t, y2: H - m.b, stroke: 'var(--fg)', 'stroke-width': 1, 'stroke-dasharray': '2 3', opacity: .7 })); const t = S('text', { class: 'ax', x: x(mk.x) + 4, y: m.t + 12, 'text-anchor': 'start' }); t.textContent = mk.label; svg.append(t); }
   // 기준선
-  if (o.ref?.y != null) { svg.append(S('line', { class: 'ref', x1: m.l, x2: W - m.r, y1: y(o.ref.y), y2: y(o.ref.y) })); const t = S('text', { class: 'reflbl', x: W - m.r, y: y(o.ref.y) - 5, 'text-anchor': 'end' }); t.textContent = o.ref.label; svg.append(t); }
+  if (o.ref?.y != null) { svg.append(S('line', { class: 'ref', x1: m.l, x2: W - m.r, y1: y(o.ref.y), y2: y(o.ref.y) })); const t = S('text', { class: 'reflbl', x: m.l + 4, y: y(o.ref.y) - 5, 'text-anchor': 'start' }); t.textContent = o.ref.label; svg.append(t); }
   // 선
   o.series.forEach(s => {
     let d = '', open = false;
@@ -551,11 +581,11 @@ function renderDaily() {
   const base = state.baseline?.groups; let ref = null;
   if (base && state.dir !== 'both' && base[`bridge:${state.dir}`]?.[mt] != null) ref = { y: mt === 'cg' ? base[`bridge:${state.dir}`][mt] * 100 : base[`bridge:${state.dir}`][mt], label: `통제 전 ${M.label}` };
   const yFmt = mt === 'tt' ? v => fTt(v) : mt === 'cg' ? v => Math.round(v) + '%' : f1;
-  const T = todayInfo();
-  lineChart($('#c-daily'), { xs: ds, xFmt: md, series, yFmt, yTick: mt === 'tt' ? v => Math.round(v) + 's' : mt === 'cg' ? v => Math.round(v) + '%' : v => Math.round(v), unit: mt === 'tt' || mt === 'cg' ? '' : M.unit, weekend: true, ref, yMin0: mt === 'cg', tipTitle: d => d === T.d && T.partial ? `${mdw(d)} (0–${T.last}시, 진행 중)` : mdw(d), partialLast: T.partial && ds[ds.length - 1] === T.d, aria: `${M.label} 일별 추이` });
+  const T = todayInfo(); const cs = state.daily?.closure?.start ?? state.history?.closure ?? '2026-10-19';
+  lineChart($('#c-daily'), { xs: ds, xFmt: md, series, yFmt, marks: ds.includes(cs) ? [{ x: ds.indexOf(cs), label: '통제 시작' }] : [], yTick: mt === 'tt' ? v => Math.round(v) + 's' : mt === 'cg' ? v => Math.round(v) + '%' : v => Math.round(v), unit: mt === 'tt' || mt === 'cg' ? '' : M.unit, weekend: true, ref, yMin0: mt === 'cg', tipTitle: d => d === T.d && T.partial ? `${mdw(d)} (0–${T.last}시, 진행 중)` : mdw(d), partialLast: T.partial && ds[ds.length - 1] === T.d, aria: `${M.label} 일별 추이` });
   $('#daily-sub').textContent = `${M.label}${mt === 'tt' ? ' (대덕대교네거리↔과학공원네거리)' : mt === 'cg' ? '' : ' (km/h)'}. 주말은 회색 띠.${M.lower === 'worse' ? ' 낮을수록 막힘.' : ' 높을수록 막힘.'}${T.partial ? ` 오늘(빈 점)은 ${T.last}시까지의 값.` : ''}`;
   legend($('#l-daily'), [...series.map(s => ({ label: s.label, color: s.color })), { label: '주말', color: 'var(--surface-2)', sq: true }, ...(ref ? [{ label: ref.label, color: 'var(--s3)', dash: true }] : [])]);
-  table($('#daily-tbl'), ['날짜', ...series.map(s => `${s.label} ${M.label}`), ...series.map(s => `${s.label} 표본`)], ds.map((d, i) => [mdw(d), ...series.map(s => s.vals[i] == null ? '–' : yFmt(s.vals[i])), ...series.map(s => f0(g(d, `bridge:${s.key}`)?.n))]).reverse());
+  table($('#daily-tbl'), ['날짜', ...series.map(s => `${s.label} ${M.label}`), '자료'], ds.map((d, i) => [mdw(d), ...series.map(s => s.vals[i] == null ? '–' : yFmt(s.vals[i])), series.some(s => g(d, `bridge:${s.key}`)?.src === 'hist') ? '교통정보센터 1시간 평균' : `10분 수집 ${f0(g(d, `bridge:${series[0].key}`)?.n)}회`]).reverse());
 }
 
 /* ============ 렌더: 시간대 ============ */
@@ -564,16 +594,16 @@ function renderHourly() {
   const series = [];
   if (state.dir === 'both') {
     for (const k of dirs()) series.push({ label: `${DIR[k].label} · ${mdw(today)}`, color: DIR[k].color, vals: g(today, `bridge:${k}`)?.h ?? hrs.map(() => null) });
-    $('#hourly-sub').textContent = '오늘(마지막 수집일)의 방향별 24시간 프로필. 띠는 출근·퇴근 피크. 한 방향을 고르면 기간 평균과 비교합니다.';
+    $('#hourly-sub').textContent = `${mdw(today)}${today === kstToday() ? '(오늘)' : '(마지막 자료일)'}의 방향별 24시간 프로필. 띠는 출근·퇴근 피크. 한 방향을 고르면 기간 평균·통제 전과 비교합니다.`;
   } else {
     const grp = `bridge:${state.dir}`;
-    series.push({ label: `${mdw(today)} (오늘)`, color: DIR[state.dir].color, vals: g(today, grp)?.h ?? hrs.map(() => null) });
+    series.push({ label: `${mdw(today)}${today === kstToday() ? ' (오늘)' : ''}`, color: DIR[state.dir].color, vals: g(today, grp)?.h ?? hrs.map(() => null) });
     series.push({ label: '기간 평일 평균', color: 'var(--ctx)', vals: hourlyAvg(grp, d => !isWe(d) && d !== today) });
     series.push({ label: '기간 주말 평균', color: 'var(--ctx)', dash: '4 4', vals: hourlyAvg(grp, d => isWe(d) && d !== today) });
-    const b = state.baseline?.groups?.[grp]?.h; if (b) series.push({ label: `통제 전 (${state.baseline.period ?? '기준'})`, color: 'var(--s3)', vals: b });
-    $('#hourly-sub').textContent = `${DIR[state.dir].long} 24시간 프로필: 오늘 vs 기간 평균${b ? ' vs 통제 전' : ''}. 띠는 출근·퇴근 피크.`;
+    const b0 = state.baseline?.groups?.[grp]; const bw = b0 && isWe(today) && b0.we ? b0.we : b0; if (bw?.h) series.push({ label: `통제 전 ${isWe(today) && b0.we ? '주말' : '평일'} 평균 (${state.baseline.range ? md(state.baseline.range[0]) + '~' + md(state.baseline.range[1]) : '기준'})`, color: 'var(--s3)', vals: bw.h });
+    $('#hourly-sub').textContent = `${DIR[state.dir].long} 24시간 프로필: 오늘 vs 기간 평균${bw?.h ? ' vs 통제 전' : ''}. 띠는 출근·퇴근 피크.`;
   }
-  const P = state.daily.peak ?? { am: [7, 9], pm: [17, 19] };
+  const P = state.daily?.peak ?? { am: [7, 9], pm: [17, 19] };
   lineChart($('#c-hourly'), { xs: hrs, xFmt: h => h + '시', series, yFmt: f1, yTick: v => Math.round(v), unit: 'km/h', bands: [{ from: P.am[0], to: P.am[1] - 1, label: '출근' }, { from: P.pm[0], to: P.pm[1] - 1, label: '퇴근' }], tipTitle: h => `${h}:00–${h}:59`, endLabel: false, forceLast: false, aria: '시간대별 속도' });
   legend($('#l-hourly'), series.map(s => ({ label: s.label, color: s.color, dash: !!s.dash })));
   table($('#hourly-tbl'), ['시간대', ...series.map(s => s.label + ' (km/h)')], hrs.map(h => [`${h}:00`, ...series.map(s => f1(s.vals[h]))]));
@@ -615,7 +645,7 @@ function rampLabel(i) { return ['≥40', '30–40', '25–30', '20–25', '15–
 /* ============ 렌더: 우회도로 ============ */
 function renderDetour() {
   const today = latestDay(), ds = rangeDays();
-  const groups = Object.entries(state.daily.groups ?? {}).filter(([k, v]) => v.kind === 'detour' && ds.some(d => g(d, k)));
+  const groups = Object.entries(state.daily?.groups ?? {}).filter(([k, v]) => v.kind === 'detour' && ds.some(d => g(d, k)));
   const T = todayInfo();
   const rows = groups.map(([k, meta]) => {
     const t = g(today, k), c = cmpVal(k, 'spd', T), live = state.latest?.groups?.[k];
@@ -623,7 +653,7 @@ function renderDetour() {
     return { k, label: meta.label, live, t, v: c.v, avg: c.ref, chg: c.v != null && c.ref ? (c.v - c.ref) / c.ref : null, vals };
   }).sort((a, b) => (a.chg ?? 1) - (b.chg ?? 1));
   const host = $('#detour-tbl');
-  if (!rows.length) { host.replaceChildren(el('div', { class: 'empty', text: '우회도로 링크가 아직 수집되지 않았습니다. traffic/links.json 의 detours 정규식과 discover.json 을 확인하세요.' })); return; }
+  if (!rows.length) { host.replaceChildren(el('div', { class: 'empty', text: '우회도로 소통은 10분 단위 실시간 수집이 시작되면 표시됩니다.' })); return; }
   const tb = el('table', { class: 'det' });
   tb.append(el('thead', {}, el('tr', {}, ...['도로', '지금', T.partial ? `오늘 0–${T.last}시` : '오늘 평균', T.partial ? `기간 같은 시간대 (${ds.length - 1}일)` : `기간 평균 (${ds.length}일)`, '변화', '오늘 피크 7–9 / 17–19', '오늘 혼잡', '추이'].map(h => el('th', { text: h })))));
   const body = el('tbody');
@@ -673,6 +703,23 @@ function renderVolume() {
   $('#vol-sub').textContent = `${V.unit ?? '대/일'} · 출처: ${V.source ?? '대전교통정보센터 통계'}${V.imported ? ' · 가져온 날 ' + V.imported : ''}`;
   legend($('#l-vol'), [...series.map(s => ({ label: s.label, color: s.color, sq: true })), ...(ref ? [{ label: '통제 전 기준', color: 'var(--s3)', dash: true }] : [])]);
   table($('#vol-tbl'), ['날짜', ...series.map(s => s.label + ' (대)'), '합계 (대)'], ds.map((d, i) => [mdw(d), ...series.map(s => f0(s.vals[i])), f0(V.days[d]?.total ?? series.reduce((a, s) => a + (s.vals[i] ?? 0), 0))]).reverse());
+  renderVolumeHourly(V, ds);
+}
+function renderVolumeHourly(V, ds) {
+  const card = $('#volh-card'); if (!V.hours) { card.hidden = true; return; } card.hidden = false;
+  const cs = state.daily?.closure?.start ?? '2026-10-19', hrs = Array.from({ length: 24 }, (_, h) => h);
+  const after = ds.filter(d => d >= cs && !isWe(d) && V.hours[d]);
+  const br = state.baseline?.range; const before = Object.keys(V.hours).filter(d => br ? d >= br[0] && d <= br[1] && !(state.baseline.exclude ?? []).includes(d) : d < cs).filter(d => !isWe(d));
+  const prof = (daysArr, k) => hrs.map(h => mean(daysArr.map(d => V.hours[d]?.[k]?.[h])));
+  const series = [];
+  for (const k of dirs()) {
+    if (after.length) series.push({ label: `${DIR[k].label} · 통제 후 평일 ${after.length}일`, color: DIR[k].color, vals: prof(after, k) });
+    if (before.length) series.push({ label: `${DIR[k].label} · 통제 전 평일 ${before.length}일`, color: DIR[k].color, dash: '4 4', vals: prof(before, k) });
+  }
+  const P = state.daily?.peak ?? { am: [7, 9], pm: [17, 19] };
+  lineChart($('#c-volh'), { xs: hrs, xFmt: h => h + '시', series, yFmt: f0, yTick: v => v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : f0(v), unit: '대/시', bands: [{ from: P.am[0], to: P.am[1] - 1, label: '출근' }, { from: P.pm[0], to: P.pm[1] - 1, label: '퇴근' }], tipTitle: h => `${h}:00–${h}:59`, endLabel: false, forceLast: false, yMin0: true, aria: '시간대별 교통량' });
+  legend($('#l-volh'), series.map(s => ({ label: s.label, color: s.color, dash: !!s.dash })));
+  table($('#volh-tbl'), ['시간대', ...series.map(s => s.label + ' (대/시)')], hrs.map(h => [`${h}:00`, ...series.map(s => f0(s.vals[h]))]));
 }
 /** 누적 막대 (방향 2개) + 기준선. 막대 ≤24px, 2px 간격, 끝만 둥글게 */
 function barChart(host, o) {
@@ -684,7 +731,8 @@ function barChart(host, o) {
   const slot = (W - m.l - m.r) / n, bw = Math.min(24, slot * 0.7), x = i => m.l + slot * i + slot / 2, y = v => m.t + (H - m.t - m.b) * (1 - v / hi);
   for (const tv of niceTicks(0, hi, 4)) { svg.append(S('line', { class: 'grid', x1: m.l, x2: W - m.r, y1: y(tv), y2: y(tv) })); const t = S('text', { class: 'ax', x: m.l - 6, y: y(tv) + 4, 'text-anchor': 'end' }); t.textContent = tv >= 1000 ? Math.round(tv / 1000) + 'K' : tv; svg.append(t); }
   const step = Math.ceil(n / Math.max(3, Math.floor((W - m.l - m.r) / 56)));
-  o.xs.forEach((d, i) => { if (i % step && i !== n - 1) return; const t = S('text', { class: 'ax', x: x(i), y: H - 10, 'text-anchor': 'middle' }); t.textContent = md(d); svg.append(t); });
+  const lblIdx = o.xs.map((_, i) => i).filter(i => i % step === 0); if (!lblIdx.includes(n - 1)) { if (n - 1 - lblIdx[lblIdx.length - 1] < step * 0.6) lblIdx.pop(); lblIdx.push(n - 1); }
+  for (const i of lblIdx) { const t = S('text', { class: 'ax', x: x(i), y: H - 10, 'text-anchor': 'middle' }); t.textContent = md(o.xs[i]); svg.append(t); }
   o.xs.forEach((d, i) => {
     let acc = 0; o.series.forEach((s, k) => { const v = s.vals[i]; if (!v) return; const y0 = y(acc), y1 = y(acc + v); const top = k === o.series.length - 1 || !o.series.slice(k + 1).some(t => t.vals[i]); const h = Math.max(1, y0 - y1 - (k ? 2 : 0));
       svg.append(S('path', { d: roundTop(x(i) - bw / 2, y1, bw, h, top ? 4 : 0), fill: s.color })); acc += v; });
@@ -713,7 +761,7 @@ function renderLive() {
   if (det.length) {
     const card = el('div', { class: 'lk' }, el('div', { class: 'n', text: '우회도로 (링크 평균)' }));
     const kv = el('div', { class: 'kv', style: 'margin-top:8px' });
-    for (const [k, gr] of det) kv.append(el('span', { class: 'k', text: state.daily.groups?.[k]?.label ?? k }), el('span', { class: 'v num', text: f1(gr.spd) + ' km/h' }), el('span', { class: 'd' }, congPill(gr.cg)));
+    for (const [k, gr] of det) kv.append(el('span', { class: 'k', text: state.daily?.groups?.[k]?.label ?? k }), el('span', { class: 'v num', text: f1(gr.spd) + ' km/h' }), el('span', { class: 'd' }, congPill(gr.cg)));
     card.append(kv); host.append(card);
   }
 }
@@ -734,10 +782,10 @@ let rsz; addEventListener('resize', () => { clearTimeout(rsz); rsz = setTimeout(
 async function load(first) {
   const main = $('#main'); if (!first) main.classList.add('loading');
   try {
-    const [daily, latest, volume, baseline] = await Promise.all([getJson('traffic/data/daily.json', true), getJson('traffic/data/latest.json', true), getJson('traffic/data/volume.json', true), getJson('traffic/data/baseline.json', true)]);
-    state.daily = daily; state.latest = latest; state.volume = volume; state.baseline = baseline;
+    const [daily, latest, volume, baseline, history] = await Promise.all([getJson('traffic/data/daily.json', true), getJson('traffic/data/latest.json', true), getJson('traffic/data/volume.json', true), getJson('traffic/data/baseline.json', true), getJson('traffic/data/history.json', true)]);
+    state.daily = daily; state.latest = latest; state.volume = volume; state.baseline = baseline; state.history = history; buildMerged();
     renderFacts();
-    if (!daily || !Object.keys(daily.days ?? {}).length) {
+    if (!days().length) {
       $('#setup').hidden = false; $('#body').hidden = true; renderStatus();
       $('#setup-err').textContent = '';
       return;
