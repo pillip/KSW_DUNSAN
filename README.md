@@ -95,7 +95,8 @@ OSM 타일 서버는 Referer가 없거나 브라우저가 아닌 User-Agent(앱 
 | `traffic/collect-tportal.mjs` | 교통정보센터 통계를 Node로 받아 `history.json`·`volume.json` 갱신 (`cron.sh tportal`). 해외 IP에서는 접속 불가. |
 | `traffic/import-tportal.mjs` | `tportal-export.json` → `history.json`(구간별 1시간 속도) · `volume.json`(VDS 교통량) · `baseline.json`(통제 전 기준). collect-tportal이 같은 함수를 쓴다. |
 | `traffic/import-volume.mjs` | 범용 CSV 변환기(엑셀 저장본 등). UTF-8/EUC-KR 자동, 열 이름 자동 인식. |
-| `traffic/data/latest.json` | 마지막 수집값. `raw/YYYY-MM-DD.json` 하루치 표본(35일 보관). `daily.json` 일별·시간대별 집계(영구). `history.json`·`volume.json`·`baseline.json`은 교통정보센터 통계(수동 갱신). |
+| `traffic/collect-compare.mjs` | **대조 자료 수집.** 전년 동기·같은 도로 원거리 구간·우회도로·시 트램 모니터링을 받아 `compare.json`. 통제 효과에서 계절 요인을 걷어내는 이중차분용. 아래 별도 절. |
+| `traffic/data/latest.json` | 마지막 수집값. `raw/YYYY-MM-DD.json` 하루치 표본(35일 보관). `daily.json` 일별·시간대별 집계(영구). `history.json`·`volume.json`·`baseline.json`은 교통정보센터 통계(수동 갱신). `compare.json`은 대조 자료(수동 갱신). |
 | `traffic/cron.sh` | **정기 수집 본체.** cron/launchd에서 `api`(10분)·`tportal`(매일) 모드로 pull→수집→push. POSIX sh. |
 | `traffic/launchd.tportal.plist` | macOS launchd 작업 예시(tportal 매일 06:40). |
 | `.github/workflows/traffic.yml` | 수동 실행 전용(discover 확인·임시 수집). 스케줄 없음. |
@@ -139,6 +140,28 @@ sh traffic/cron.sh tportal 30 # 교통정보센터 통계 30일치
 - 교통량: 도로-교통량 > VDS(지점별, 1시간). 대덕대교 위에는 VDS가 없어 교량 바로 옆 만년동 쪽 **VDS0016**(상행, 만년네거리▶서구보건소네거리)·**VDS0015**(하행, 대덕대교네거리▶만년상아아파트)를 쓴다. 대전시 「트램구간 일간보고서」 5공구 값과 같은 지점이다. 대덕대교네거리에서 회전해 들어오는 차가 섞이므로 교량 통과량과 완전히 같지는 않다.
 - 통제 전 기준: 기간의 평일(공휴일 제외)·주말을 따로 평균. 요약·일별·시간대 차트는 비교 대상을 "기간 평균"에서 "통제 전"으로 바꾸고, 주말 날짜는 주말 기준과 비교한다. 9/28~10/16 평일 14일: 둔산 방향 38.2 km/h(출근 27.3 / 퇴근 31.3), 연구단지 방향 32.2(출근 29.1 / 퇴근 21.4), 교통량 56,467 대/일.
 - `import-volume.mjs`는 다른 CSV 형식(포털의 엑셀 저장본 등)을 넣을 때의 범용 변환기.
+
+### 대조 자료 (`collect-compare.mjs` → `compare.json`)
+
+"통제 때문에 나빠졌다"를 보이려면 통제와 무관한 비교 대상이 있어야 한다. 단순 전후 비교는 "가을 나들이철이라 그렇다"는 반론을 못 막는다. 이 스크립트는 네 가지를 같은 기간·같은 API로 받아 이중차분(전후 변화에서 대조군의 전후 변화를 뺀다)을 가능하게 한다.
+
+```bash
+node traffic/collect-compare.mjs                   # 2025·2026 의 09-01~11-04
+node traffic/collect-compare.mjs --years 2026      # 올해만
+node traffic/collect-compare.mjs --skip-tram       # 트램 모니터링 생략(날짜당 1회라 느리다)
+```
+
+| 받는 것 | 쓰임 |
+|---|---|
+| `bridge` — 교량 6개 구간, 연도별 | 전년 같은 날짜와 비교. 계절 요인 제거. |
+| `control` — 대덕대로 중 교량에서 먼 구간들의 시간대별 평균 | 같은 도로·같은 수집체계인데 통제 영향은 없다. 가장 깨끗한 대조군. |
+| `detour` — 둔산대로·엑스포로·천변도시고속화도로(갑천) | 우회도로의 **통제 전** 소통. 10분 수집에는 통제 후밖에 없어 생긴 공백을 메운다. |
+| `cityTram` — `/api/v1/tram/getRoadSpeed` 의 도심 도로 평균 | 시가 트램구간 일간보고서에 쓰는 지표. 집행부와 같은 숫자로 대조한다. |
+
+- 전년 자료는 `getTrafficSpeedBySection` 이 그대로 준다(2025년치 확인). `history.json`·`volume.json` 은 건드리지 않고 별도 파일에 쌓는다.
+- tportal 구간속도에 **대학로·만년로·유등로는 없다**(2026.11 확인). 이 셋은 공공데이터포털 10분 수집(`daily.json`)으로만 볼 수 있고, 통제 전 값은 없다.
+- 시 트램 모니터링의 대덕대로 구간은 `안골네거리▶신탄진네거리`(대덕구)로 **대덕대교가 아니다.** 도로별 대표 구간 하나씩만 재는 시 전체 모니터링이므로, 교량 자체가 아니라 시 전체 대조군으로만 쓴다. 응답에 1주 전·1개월 전·전년 값이 함께 들어 있다.
+- 공휴일은 목록을 박아 두지 않고 VDS 교통량으로 판정한다(평일인데 그 해 평일 중앙값의 85% 미만).
 
 ### 집계 규칙
 

@@ -1,0 +1,10 @@
+# 공공데이터포털 인증키. README 의 수집 설정 절차가 여기에 넣으라고 안내한다.
+traffic/.env
+
+# 수집 중복 실행을 막는 락. cron.sh 가 traffic/data 를 통째로 add 하므로 빼 둔다.
+traffic/data/*.lock
+
+# 브라우저 콘솔 경로로 받은 임시 내려받기 파일
+tportal-export.json
+
+.DS_Store
